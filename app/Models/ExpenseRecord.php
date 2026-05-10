@@ -128,6 +128,11 @@ class ExpenseRecord extends Model
         return $query->where('record_type', self::TYPE_NON_CLAIMABLE);
     }
 
+    public function scopeWithoutVoided(Builder $query): Builder
+    {
+        return $query->where($this->getTable().'.status', '!=', 'voided');
+    }
+
     public function statusLabel(): string
     {
         $source = $this->record_type === self::TYPE_NON_CLAIMABLE

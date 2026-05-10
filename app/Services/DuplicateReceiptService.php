@@ -13,6 +13,7 @@ class DuplicateReceiptService
         }
 
         return ExpenseRecord::query()
+            ->withoutVoided()
             ->whereKeyNot($record->id)
             ->where('user_id', $record->user_id)
             ->where('record_type', $record->record_type)

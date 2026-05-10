@@ -312,6 +312,114 @@ class ExampleTest extends TestCase
         ]);
     }
 
+    public function test_voided_records_are_removed_from_dashboard_operational_totals(): void
+    {
+        $this->withoutVite();
+        $this->seed();
+
+        $user = User::where('email', 'nidzamyatimi@physiomobile.com')->first();
+        $user->forceFill(['must_change_password' => false])->save();
+        $category = ExpenseCategory::where('code', 'MEAL')->first();
+
+        ExpenseRecord::create([
+            'user_id' => $user->id,
+            'department_id' => $user->department_id,
+            'expense_category_id' => $category->id,
+            'claim_reference_no' => 'PMEXP-202605-00004',
+            'record_type' => ExpenseRecord::TYPE_CLAIMABLE,
+            'merchant_name' => 'Active Merchant',
+            'receipt_date' => '2026-05-10',
+            'currency' => 'MYR',
+            'total_amount' => '61.60',
+            'description' => 'Active claim',
+            'status' => 'pending_review',
+        ]);
+        ExpenseRecord::create([
+            'user_id' => $user->id,
+            'department_id' => $user->department_id,
+            'claim_reference_no' => 'PMEXP-202605-00005',
+            'record_type' => ExpenseRecord::TYPE_CLAIMABLE,
+            'merchant_name' => 'Voided Merchant',
+            'receipt_date' => '2026-05-10',
+            'currency' => 'MYR',
+            'total_amount' => '123.20',
+            'description' => 'Wrong upload',
+            'status' => 'voided',
+        ]);
+
+        $response = $this->actingAs($user)->get('/');
+
+        $response->assertStatus(200);
+        $response->assertSee('Active Merchant');
+        $response->assertSee('MYR 61.60');
+        $response->assertSee('Meal');
+        $response->assertDontSee('Voided Merchant');
+        $response->assertDontSee('MYR 123.20');
+        $response->assertDontSee('Uncategorised');
+    }
+
+    public function test_voided_records_are_hidden_from_records_index_until_filtered(): void
+    {
+        $this->withoutVite();
+        $this->seed();
+
+        $user = User::where('email', 'nidzamyatimi@physiomobile.com')->first();
+        $user->forceFill(['must_change_password' => false])->save();
+
+        ExpenseRecord::create([
+            'user_id' => $user->id,
+            'department_id' => $user->department_id,
+            'claim_reference_no' => 'PMEXP-202605-00006',
+            'record_type' => ExpenseRecord::TYPE_CLAIMABLE,
+            'merchant_name' => 'Hidden Voided Merchant',
+            'receipt_date' => '2026-05-10',
+            'currency' => 'MYR',
+            'total_amount' => '77.00',
+            'status' => 'voided',
+        ]);
+
+        $this->actingAs($user)
+            ->get('/records')
+            ->assertStatus(200)
+            ->assertDontSee('Hidden Voided Merchant');
+
+        $this->actingAs($user)
+            ->get('/records?status=voided')
+            ->assertStatus(200)
+            ->assertSee('Hidden Voided Merchant');
+    }
+
+    public function test_voided_records_are_hidden_from_reports_until_filtered(): void
+    {
+        $this->withoutVite();
+        $this->seed();
+
+        $user = User::where('email', 'nidzamyatimi@physiomobile.com')->first();
+        $user->forceFill(['must_change_password' => false])->save();
+
+        ExpenseRecord::create([
+            'user_id' => $user->id,
+            'department_id' => $user->department_id,
+            'claim_reference_no' => 'PMEXP-202605-00007',
+            'record_type' => ExpenseRecord::TYPE_CLAIMABLE,
+            'merchant_name' => 'Report Voided Merchant',
+            'receipt_date' => '2026-05-10',
+            'currency' => 'MYR',
+            'total_amount' => '88.00',
+            'status' => 'voided',
+        ]);
+
+        $this->actingAs($user)
+            ->get('/reports')
+            ->assertStatus(200)
+            ->assertDontSee('Report Voided Merchant');
+
+        $this->actingAs($user)
+            ->get('/reports?status=voided')
+            ->assertStatus(200)
+            ->assertSee('Report Voided Merchant');
+    }
+
     public function test_ensure_catalog_command_creates_default_categories(): void
     {
         $this->artisan('expenseflow:ensure-catalog')

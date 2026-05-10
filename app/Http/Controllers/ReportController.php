@@ -75,6 +75,7 @@ class ReportController extends Controller
             ->when($request->filled('expense_category_id'), fn ($query) => $query->where('expense_category_id', $request->expense_category_id))
             ->when($request->filled('record_type'), fn ($query) => $query->where('record_type', $request->record_type))
             ->when($request->filled('status'), fn ($query) => $query->where('status', $request->status))
+            ->when(! $request->filled('status'), fn ($query) => $query->withoutVoided())
             ->when($request->filled('payment_method'), fn ($query) => $query->where('payment_method', 'like', '%'.$request->payment_method.'%'));
     }
 

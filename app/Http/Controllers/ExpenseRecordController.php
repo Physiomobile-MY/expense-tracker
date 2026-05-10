@@ -20,6 +20,7 @@ class ExpenseRecordController extends Controller
             ->with(['user', 'department', 'category', 'primaryReceipt'])
             ->when($request->filled('record_type'), fn ($query) => $query->where('record_type', $request->record_type))
             ->when($request->filled('status'), fn ($query) => $query->where('status', $request->status))
+            ->when(! $request->filled('status'), fn ($query) => $query->withoutVoided())
             ->when($request->filled('department_id'), fn ($query) => $query->where('department_id', $request->department_id))
             ->when($request->filled('staff_id'), fn ($query) => $query->where('user_id', $request->staff_id))
             ->when($request->filled('date_from'), fn ($query) => $query->whereDate('receipt_date', '>=', $request->date_from))

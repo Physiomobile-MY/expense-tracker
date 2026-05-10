@@ -16,7 +16,7 @@ class DashboardController extends Controller
         $monthStart = now()->startOfMonth();
         $monthEnd = now()->endOfMonth();
 
-        $base = ExpenseRecord::query()->visibleTo($user);
+        $base = ExpenseRecord::query()->visibleTo($user)->withoutVoided();
         $month = (clone $base)->whereBetween('expense_records.created_at', [$monthStart, $monthEnd]);
 
         $metrics = [
@@ -78,6 +78,7 @@ class DashboardController extends Controller
             $highValueClaims = ExpenseRecord::query()
                 ->with(['user', 'department'])
                 ->claimable()
+                ->withoutVoided()
                 ->where('total_amount', '>=', 500)
                 ->latest()
                 ->limit(5)

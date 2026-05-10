@@ -205,6 +205,7 @@ class ExpenseRecordService
         }
 
         $voidedRecord = $this->transition($record, $actor, 'voided', 'voided', $reason);
+        $voidedRecord->forceFill(['duplicate_warning' => false])->save();
         $voidedRecord->comments()->create([
             'user_id' => $actor->id,
             'comment' => 'Void reason: '.$reason,
