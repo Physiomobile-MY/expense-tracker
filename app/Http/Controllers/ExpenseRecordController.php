@@ -130,7 +130,7 @@ class ExpenseRecordController extends Controller
         $rules = [
             'record_type' => [$submit ? 'required' : 'nullable', 'in:claimable,non_claimable'],
             'department_id' => ['nullable', 'exists:departments,id'],
-            'expense_category_id' => [$submit ? 'required' : 'nullable', 'exists:expense_categories,id'],
+            'expense_category_id' => ['nullable', 'exists:expense_categories,id'],
             'merchant_name' => [$submit ? 'required' : 'nullable', 'string', 'max:255'],
             'merchant_address' => ['nullable', 'string'],
             'receipt_date' => [$submit ? 'required' : 'nullable', 'date'],
@@ -144,7 +144,7 @@ class ExpenseRecordController extends Controller
             'payment_method' => ['nullable', 'string', 'max:255'],
             'receipt_number' => ['nullable', 'string', 'max:255'],
             'project_cost_center' => ['nullable', 'string', 'max:255'],
-            'description' => [$submit ? 'required' : 'nullable', 'string'],
+            'description' => ['nullable', 'string'],
             'remarks' => ['nullable', 'string'],
             'items' => ['nullable', 'array'],
             'items.*.description' => ['nullable', 'string', 'max:255'],
@@ -153,6 +153,9 @@ class ExpenseRecordController extends Controller
             'items.*.amount' => ['nullable', 'numeric', 'min:0'],
         ];
 
-        return $request->validate($rules);
+        return $request->validate($rules, [], [
+            'expense_category_id' => 'expense category',
+            'description' => 'purpose / description',
+        ]);
     }
 }

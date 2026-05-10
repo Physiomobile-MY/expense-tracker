@@ -12,6 +12,7 @@
         'reviewed' => 'bg-green-50 text-green-700',
         'flagged' => 'bg-red-50 text-red-700',
         'archived' => 'bg-gray-200 text-gray-700',
+        'voided' => 'bg-gray-900 text-white',
     ];
 @endphp
 <span class="pm-badge {{ $colors[$status] ?? 'bg-gray-100 text-gray-700' }}">{{ $label ?? str($status)->headline() }}</span>

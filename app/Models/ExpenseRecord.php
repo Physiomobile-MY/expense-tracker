@@ -149,7 +149,7 @@ class ExpenseRecord extends Model
     public function canBeEditedBy(User $user): bool
     {
         if ($user->canManageExpenses()) {
-            return ! in_array($this->status, ['paid', 'archived'], true);
+            return ! in_array($this->status, ['approved', 'paid', 'reviewed', 'archived', 'voided'], true);
         }
 
         return $this->user_id === $user->id
@@ -159,5 +159,14 @@ class ExpenseRecord extends Model
     public function canBeReviewedBy(User $user): bool
     {
         return $user->canManageExpenses();
+    }
+
+    public function canBeVoidedBy(User $user): bool
+    {
+        if (in_array($this->status, ['approved', 'paid', 'reviewed', 'archived', 'voided'], true)) {
+            return false;
+        }
+
+        return $user->canManageExpenses() || $this->user_id === $user->id;
     }
 }

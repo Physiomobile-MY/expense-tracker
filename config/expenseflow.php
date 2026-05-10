@@ -25,6 +25,7 @@ return [
         'approved' => 'Approved',
         'rejected' => 'Rejected',
         'paid' => 'Paid',
+        'voided' => 'Voided',
     ],
 
     'non_claimable_statuses' => [
@@ -33,6 +34,7 @@ return [
         'reviewed' => 'Reviewed',
         'flagged' => 'Flagged',
         'archived' => 'Archived',
+        'voided' => 'Voided',
     ],
 
     'receipt_prompt' => <<<'PROMPT'

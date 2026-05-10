@@ -16,4 +16,6 @@
 @endif
 
 @include('records._form')
+
+@include('records._void-form')
 @endsection

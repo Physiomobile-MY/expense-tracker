@@ -77,26 +77,34 @@
     </section>
 </div>
 
-@if (auth()->user()->canManageExpenses())
+@php
+    $canReviewClaim = $record->record_type === 'claimable' && in_array($record->status, ['submitted', 'pending_review', 'need_clarification'], true);
+    $canPayClaim = $record->record_type === 'claimable' && $record->status === 'approved';
+    $canReviewNonClaimable = $record->record_type === 'non_claimable' && in_array($record->status, ['recorded', 'flagged'], true);
+@endphp
+
+@if (auth()->user()->canManageExpenses() && ($canReviewClaim || $canPayClaim || $canReviewNonClaimable))
     <section class="pm-card mt-4 p-4">
         <h2 class="font-bold text-gray-950">Review Actions</h2>
         <div class="mt-4 grid gap-3 lg:grid-cols-3">
             @if ($record->record_type === 'claimable')
-                <form method="POST" action="{{ route('records.approve', $record) }}" class="space-y-2">
-                    @csrf
-                    <textarea class="pm-input min-h-20" name="remarks" placeholder="Approval remarks"></textarea>
-                    <button class="pm-btn-primary w-full" type="submit">Approve</button>
-                </form>
-                <form method="POST" action="{{ route('records.reject', $record) }}" class="space-y-2">
-                    @csrf
-                    <textarea class="pm-input min-h-20" name="remarks" placeholder="Rejection remarks"></textarea>
-                    <button class="pm-btn-secondary w-full" type="submit">Reject</button>
-                </form>
-                <form method="POST" action="{{ route('records.clarify', $record) }}" class="space-y-2">
-                    @csrf
-                    <textarea class="pm-input min-h-20" name="remarks" placeholder="Clarification needed" required></textarea>
-                    <button class="pm-btn-secondary w-full" type="submit">Request Clarification</button>
-                </form>
+                @if ($canReviewClaim)
+                    <form method="POST" action="{{ route('records.approve', $record) }}" class="space-y-2">
+                        @csrf
+                        <textarea class="pm-input min-h-20" name="remarks" placeholder="Approval remarks"></textarea>
+                        <button class="pm-btn-primary w-full" type="submit">Approve</button>
+                    </form>
+                    <form method="POST" action="{{ route('records.reject', $record) }}" class="space-y-2">
+                        @csrf
+                        <textarea class="pm-input min-h-20" name="remarks" placeholder="Rejection remarks"></textarea>
+                        <button class="pm-btn-secondary w-full" type="submit">Reject</button>
+                    </form>
+                    <form method="POST" action="{{ route('records.clarify', $record) }}" class="space-y-2">
+                        @csrf
+                        <textarea class="pm-input min-h-20" name="remarks" placeholder="Clarification needed" required></textarea>
+                        <button class="pm-btn-secondary w-full" type="submit">Request Clarification</button>
+                    </form>
+                @endif
                 @if ($record->status === 'approved')
                     <form method="POST" action="{{ route('records.paid', $record) }}" class="space-y-2 lg:col-span-3">
                         @csrf
@@ -104,7 +112,7 @@
                         <button class="pm-btn-primary w-full" type="submit">Mark as Paid</button>
                     </form>
                 @endif
-            @elseif ($record->record_type === 'non_claimable')
+            @elseif ($canReviewNonClaimable)
                 <form method="POST" action="{{ route('records.review', $record) }}" class="space-y-2">
                     @csrf
                     <textarea class="pm-input min-h-20" name="remarks" placeholder="Review remarks"></textarea>
@@ -119,6 +127,8 @@
         </div>
     </section>
 @endif
+
+@include('records._void-form')
 
 <div class="mt-4 grid gap-4 lg:grid-cols-2">
     <section class="pm-card overflow-hidden">

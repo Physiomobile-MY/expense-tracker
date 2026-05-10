@@ -129,6 +129,40 @@ class ExampleTest extends TestCase
         });
     }
 
+    public function test_claim_submission_auto_fills_category_and_description_when_missing(): void
+    {
+        $this->seed();
+        Mail::fake();
+
+        $user = User::where('email', 'nidzamyatimi@physiomobile.com')->first();
+        $user->forceFill(['must_change_password' => false])->save();
+        $record = ExpenseRecord::create([
+            'user_id' => $user->id,
+            'department_id' => $user->department_id,
+            'status' => 'draft',
+            'currency' => 'MYR',
+        ]);
+
+        $response = $this->actingAs($user)
+            ->put('/records/'.$record->id, [
+                'intent' => 'claimable',
+                'merchant_name' => 'Hayaki Kopitiam',
+                'receipt_date' => '2026-05-10',
+                'currency' => 'MYR',
+                'total_amount' => '18.90',
+                'items' => [
+                    ['description' => 'Set Nasi Ayam Madu', 'quantity' => 1, 'unit_price' => 18.90, 'amount' => 18.90],
+                ],
+            ]);
+
+        $response->assertRedirect();
+        $record->refresh();
+
+        $this->assertSame('pending_review', $record->status);
+        $this->assertSame('Meal', $record->category?->name);
+        $this->assertSame('Receipt from Hayaki Kopitiam', $record->description);
+    }
+
     public function test_claim_approval_emails_finance_for_payment_follow_up(): void
     {
         $this->seed();
@@ -214,6 +248,65 @@ class ExampleTest extends TestCase
         $this->assertDatabaseCount('expense_notifications', 0);
         $this->assertDatabaseCount('audit_logs', 0);
         Storage::assertMissing($path);
+    }
+
+    public function test_user_can_void_own_unapproved_claim_with_reason(): void
+    {
+        $this->seed();
+
+        $user = User::where('email', 'nidzamyatimi@physiomobile.com')->first();
+        $user->forceFill(['must_change_password' => false])->save();
+        $category = ExpenseCategory::first();
+        $record = ExpenseRecord::create([
+            'user_id' => $user->id,
+            'department_id' => $user->department_id,
+            'expense_category_id' => $category->id,
+            'claim_reference_no' => 'PMEXP-202605-00003',
+            'record_type' => ExpenseRecord::TYPE_CLAIMABLE,
+            'merchant_name' => 'Duplicate Merchant',
+            'receipt_date' => '2026-05-10',
+            'currency' => 'MYR',
+            'total_amount' => '33.00',
+            'description' => 'Duplicate upload',
+            'status' => 'pending_review',
+        ]);
+
+        $response = $this->actingAs($user)
+            ->post('/records/'.$record->id.'/void', [
+                'reason' => 'Uploaded same receipt twice.',
+            ]);
+
+        $response->assertRedirect('/records/'.$record->id);
+        $this->assertDatabaseHas('expense_records', [
+            'id' => $record->id,
+            'status' => 'voided',
+        ]);
+        $this->assertDatabaseHas('expense_approvals', [
+            'expense_record_id' => $record->id,
+            'action' => 'voided',
+            'remarks' => 'Uploaded same receipt twice.',
+        ]);
+        $this->assertDatabaseHas('expense_comments', [
+            'expense_record_id' => $record->id,
+            'comment' => 'Void reason: Uploaded same receipt twice.',
+        ]);
+    }
+
+    public function test_ensure_catalog_command_creates_default_categories(): void
+    {
+        $this->artisan('expenseflow:ensure-catalog')
+            ->assertSuccessful();
+
+        $this->assertDatabaseHas('expense_categories', [
+            'code' => 'MEAL',
+            'name' => 'Meal',
+            'status' => 'active',
+        ]);
+        $this->assertDatabaseHas('expense_categories', [
+            'code' => 'OTHERS',
+            'name' => 'Others',
+            'status' => 'active',
+        ]);
     }
 
     public function test_finance_email_test_command_sends_to_configured_recipient(): void

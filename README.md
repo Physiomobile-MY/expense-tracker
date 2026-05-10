@@ -61,6 +61,12 @@ To reset these accounts on an existing deployment:
 php artisan expenseflow:ensure-demo-users
 ```
 
+To create or repair the default departments and expense categories:
+
+```bash
+php artisan expenseflow:ensure-catalog
+```
+
 ## Finance Email Notifications
 
 Claimable expenses email finance when they are submitted for approval and when they are approved.

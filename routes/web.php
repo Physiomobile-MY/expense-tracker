@@ -50,6 +50,7 @@ Route::middleware(['auth', 'password.changed'])->group(function (): void {
     Route::post('/records/{record}/paid', [ExpenseWorkflowController::class, 'paid'])->name('records.paid');
     Route::post('/records/{record}/review', [ExpenseWorkflowController::class, 'review'])->name('records.review');
     Route::post('/records/{record}/flag', [ExpenseWorkflowController::class, 'flag'])->name('records.flag');
+    Route::post('/records/{record}/void', [ExpenseWorkflowController::class, 'voidRecord'])->name('records.void');
 
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'markRead'])->name('notifications.read');

@@ -58,6 +58,19 @@ class ExpenseWorkflowController extends Controller
         return back()->with('status', 'Receipt flagged.');
     }
 
+    public function voidRecord(Request $request, ExpenseRecord $record, ExpenseRecordService $records): RedirectResponse
+    {
+        abort_unless($record->canBeVoidedBy($request->user()), 403);
+
+        $validated = $request->validate([
+            'reason' => ['required', 'string', 'max:2000'],
+        ]);
+
+        $records->voidRecord($record, $request->user(), $validated['reason']);
+
+        return redirect()->route('records.show', $record)->with('status', 'Claim voided.');
+    }
+
     private function authorizeReviewer(Request $request): void
     {
         abort_unless($request->user()->canManageExpenses(), 403);

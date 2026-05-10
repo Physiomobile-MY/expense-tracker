@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Mail\ClaimFinanceNotificationMail;
 use App\Models\AuditLog;
 use App\Models\ExpenseApproval;
+use App\Models\ExpenseCategory;
 use App\Models\ExpenseNotification;
 use App\Models\ExpenseReceipt;
 use App\Models\ExpenseRecord;
@@ -72,6 +73,12 @@ class ExpenseRecordService
             'remarks' => $data['notes'] ?? $record->remarks,
         ])->save();
 
+        if (! $record->expense_category_id) {
+            $record->forceFill([
+                'expense_category_id' => $this->inferCategoryId($record, $data),
+            ])->save();
+        }
+
         $record->items()->delete();
         foreach ((array) ($data['items'] ?? []) as $item) {
             if (! array_filter((array) $item)) {
@@ -91,10 +98,10 @@ class ExpenseRecordService
     {
         $this->ensureEditable($record, $actor);
 
-        $before = $record->only(array_keys($this->recordPayload($data)));
+        $before = $record->only(array_keys($this->recordPayloadWithFallbacks($record, $data)));
 
         return DB::transaction(function () use ($record, $actor, $data, $before): ExpenseRecord {
-            $record->fill($this->recordPayload($data))->save();
+            $record->fill($this->recordPayloadWithFallbacks($record, $data))->save();
             $this->syncItems($record, $data['items'] ?? []);
             $this->duplicateReceiptService->refreshWarning($record);
             $this->audit($actor, 'record_updated', 'expense_records', $record->id, $before, $record->fresh()->toArray());
@@ -108,7 +115,7 @@ class ExpenseRecordService
         $this->ensureEditable($record, $actor);
 
         $submittedRecord = DB::transaction(function () use ($record, $actor, $data): ExpenseRecord {
-            $record->fill($this->recordPayload($data));
+            $record->fill($this->recordPayloadWithFallbacks($record, $data));
             $record->record_type = $data['record_type'];
             $record->department_id = $record->department_id ?: $actor->department_id;
 
@@ -191,9 +198,28 @@ class ExpenseRecordService
         return $this->transition($record, $actor, 'rejected', 'rejected', $remarks, ['rejected_at' => now()]);
     }
 
+    public function voidRecord(ExpenseRecord $record, User $actor, string $reason): ExpenseRecord
+    {
+        if (! $record->canBeVoidedBy($actor)) {
+            throw ValidationException::withMessages(['record' => 'This expense record cannot be voided in its current status.']);
+        }
+
+        $voidedRecord = $this->transition($record, $actor, 'voided', 'voided', $reason);
+        $voidedRecord->comments()->create([
+            'user_id' => $actor->id,
+            'comment' => 'Void reason: '.$reason,
+        ]);
+
+        return $voidedRecord->refresh();
+    }
+
     public function requestClarification(ExpenseRecord $record, User $actor, string $remarks): ExpenseRecord
     {
         $this->ensureReviewer($record, $actor);
+
+        if ($record->record_type !== ExpenseRecord::TYPE_CLAIMABLE || ! in_array($record->status, ['submitted', 'pending_review', 'need_clarification'], true)) {
+            throw ValidationException::withMessages(['status' => 'Only pending claimable records can request clarification.']);
+        }
 
         $record = $this->transition($record, $actor, 'clarification_requested', 'need_clarification', $remarks);
         $record->comments()->create([
@@ -230,8 +256,8 @@ class ExpenseRecordService
     {
         $this->ensureReviewer($record, $actor);
 
-        if ($record->record_type !== ExpenseRecord::TYPE_NON_CLAIMABLE) {
-            throw ValidationException::withMessages(['status' => 'Only non-claimable receipts can be flagged.']);
+        if ($record->record_type !== ExpenseRecord::TYPE_NON_CLAIMABLE || ! in_array($record->status, ['recorded', 'reviewed'], true)) {
+            throw ValidationException::withMessages(['status' => 'Only recorded or reviewed non-claimable receipts can be flagged.']);
         }
 
         return $this->transition($record, $actor, 'flagged', 'flagged', $remarks);
@@ -312,6 +338,59 @@ class ExpenseRecordService
         ]);
     }
 
+    private function recordPayloadWithFallbacks(ExpenseRecord $record, array $data): array
+    {
+        $payload = $this->recordPayload($data);
+
+        if (empty($payload['expense_category_id'])) {
+            $payload['expense_category_id'] = $record->expense_category_id ?: $this->inferCategoryId($record, $data);
+        }
+
+        if (blank($payload['description'] ?? null)) {
+            $merchant = $payload['merchant_name'] ?? $record->merchant_name;
+            $payload['description'] = $merchant ? 'Receipt from '.$merchant : 'Receipt uploaded for expense record.';
+        }
+
+        return $payload;
+    }
+
+    private function inferCategoryId(ExpenseRecord $record, array $data): int
+    {
+        $text = str($record->merchant_name.' '.($data['merchant_name'] ?? '').' '.($data['description'] ?? ''))
+            ->append(' '.collect($data['items'] ?? [])->pluck('description')->implode(' '))
+            ->lower()
+            ->toString();
+
+        $categoryName = match (true) {
+            str_contains($text, 'petronas') || str_contains($text, 'shell') || str_contains($text, 'caltex') || str_contains($text, 'bhp') || str_contains($text, 'petrol') => 'Petrol',
+            str_contains($text, 'parking') => 'Parking',
+            str_contains($text, 'toll') => 'Toll',
+            str_contains($text, 'hotel') || str_contains($text, 'inn ') || str_contains($text, 'accommodation') => 'Accommodation',
+            str_contains($text, 'courier') || str_contains($text, 'delivery') || str_contains($text, 'poslaju') || str_contains($text, 'j&t') => 'Courier / Delivery',
+            str_contains($text, 'software') || str_contains($text, 'subscription') => 'Software Subscription',
+            str_contains($text, 'clinic') => 'Clinic Supplies',
+            str_contains($text, 'medical') || str_contains($text, 'pharmacy') => 'Medical Supplies',
+            str_contains($text, 'restaurant') || str_contains($text, 'cafe') || str_contains($text, 'kopitiam') || str_contains($text, 'nasi') || str_contains($text, 'kopi') || str_contains($text, 'meal') || str_contains($text, 'food') || str_contains($text, 'dine') => 'Meal',
+            default => 'Others',
+        };
+
+        return $this->ensureCategory($categoryName)->id;
+    }
+
+    private function ensureCategory(string $name): ExpenseCategory
+    {
+        $code = str($name)->upper()->replaceMatches('/[^A-Z0-9]+/', '_')->trim('_')->toString();
+
+        return tap(ExpenseCategory::firstOrCreate(
+            ['code' => $code],
+            ['name' => $name, 'description' => null, 'status' => 'active']
+        ), function (ExpenseCategory $category) use ($name): void {
+            if ($category->status !== 'active' || $category->name !== $name) {
+                $category->forceFill(['name' => $name, 'status' => 'active'])->save();
+            }
+        });
+    }
+
     private function syncItems(ExpenseRecord $record, array $items): void
     {
         $record->items()->delete();
@@ -381,6 +460,7 @@ class ExpenseRecordService
             'paid' => 'Claim marked as paid',
             'reviewed' => 'Receipt reviewed',
             'flagged' => 'Receipt flagged',
+            'voided' => 'Claim voided',
             default => 'Expense record updated',
         };
     }
@@ -394,6 +474,7 @@ class ExpenseRecordService
             'paid' => $record->claim_reference_no.' has been marked as paid.',
             'reviewed' => $record->claim_reference_no.' was reviewed.',
             'flagged' => $record->claim_reference_no.' was flagged for review.',
+            'voided' => ($record->claim_reference_no ?: 'Draft receipt').' was voided.',
             default => $record->claim_reference_no.' was updated.',
         };
     }
