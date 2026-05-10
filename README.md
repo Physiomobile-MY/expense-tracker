@@ -69,6 +69,7 @@ Configure mail delivery and recipient in `.env`:
 
 ```env
 MAIL_MAILER=smtp
+MAIL_SCHEME=smtp
 MAIL_HOST=
 MAIL_PORT=587
 MAIL_USERNAME=
@@ -76,6 +77,14 @@ MAIL_PASSWORD=
 MAIL_FROM_ADDRESS=no-reply@physiomobile.com
 MAIL_FROM_NAME="${APP_NAME}"
 FINANCE_APPROVAL_EMAIL=finance@physiomobile.com
+```
+
+For port `587`, use `MAIL_SCHEME=smtp`. For port `465`, use `MAIL_SCHEME=smtps`. Do not set `MAIL_SCHEME=null` in Laravel Cloud.
+
+Test SMTP from the server with:
+
+```bash
+php artisan expenseflow:test-finance-email
 ```
 
 ## Clear Test Expense Records

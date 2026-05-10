@@ -215,4 +215,14 @@ class ExampleTest extends TestCase
         $this->assertDatabaseCount('audit_logs', 0);
         Storage::assertMissing($path);
     }
+
+    public function test_finance_email_test_command_sends_to_configured_recipient(): void
+    {
+        config(['expenseflow.notifications.finance_approval_email' => 'finance@physiomobile.com']);
+
+        $this->artisan('expenseflow:test-finance-email')
+            ->expectsOutputToContain('To: finance@physiomobile.com')
+            ->expectsOutputToContain('Test email sent.')
+            ->assertSuccessful();
+    }
 }
