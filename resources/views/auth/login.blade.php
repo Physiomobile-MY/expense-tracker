@@ -42,9 +42,6 @@
             <button class="pm-btn-primary w-full" type="submit">Login</button>
         </form>
 
-        <div class="mt-6 rounded-lg bg-[#FDECEC] p-3 text-xs text-[#A80F16]">
-            Seeded MVP accounts use password <span class="font-semibold">password</span>: director@physiomobile.com, finance@physiomobile.com, staff@physiomobile.com
-        </div>
     </section>
 </main>
 </body>
