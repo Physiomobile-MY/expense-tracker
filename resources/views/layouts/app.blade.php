@@ -46,7 +46,9 @@
     <header class="sticky top-0 z-30 border-b border-gray-200 bg-white/95 backdrop-blur">
         <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
             <a href="{{ route('dashboard') }}" class="flex min-w-0 items-center gap-3">
-                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#D71920] text-sm font-bold text-white">PM</span>
+                <span class="flex h-10 w-28 shrink-0 items-center sm:w-36">
+                    <img src="{{ asset('images/physiomobile-logo.png') }}" alt="Physiomobile" class="max-h-10 w-full object-contain object-left">
+                </span>
                 <span class="min-w-0">
                     <span class="block truncate text-sm font-bold text-gray-900 sm:text-base">{{ config('expenseflow.brand.name') }}</span>
                     <span class="block truncate text-xs text-gray-500">{{ config('expenseflow.brand.tagline') }}</span>

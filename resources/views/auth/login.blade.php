@@ -10,7 +10,9 @@
 <main class="flex min-h-screen items-center justify-center px-4 py-8">
     <section class="pm-card w-full max-w-md p-6">
         <div class="mb-7 flex items-center gap-3">
-            <div class="flex h-12 w-12 items-center justify-center rounded-lg bg-[#D71920] text-base font-bold text-white">PM</div>
+            <div class="flex h-14 w-40 items-center">
+                <img src="{{ asset('images/physiomobile-logo.png') }}" alt="Physiomobile" class="max-h-14 w-full object-contain object-left">
+            </div>
             <div>
                 <h1 class="text-xl font-bold text-gray-950">{{ config('expenseflow.brand.name') }}</h1>
                 <p class="text-sm text-gray-500">{{ config('expenseflow.brand.tagline') }}</p>
