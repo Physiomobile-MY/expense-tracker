@@ -157,7 +157,7 @@
         </div>
     </section>
 
-    <div class="sticky bottom-20 z-20 rounded-lg border border-gray-200 bg-white p-3 shadow-lg lg:bottom-4">
+    <div class="rounded-lg border border-gray-200 bg-white p-3 shadow-sm lg:sticky lg:bottom-4 lg:z-20 lg:shadow-lg">
         <div class="grid gap-2 sm:grid-cols-3">
             <button class="pm-btn-secondary" type="submit" name="intent" value="save">Save Draft</button>
             <button class="pm-btn-primary" type="submit" name="intent" value="claimable">Submit for Approval</button>
