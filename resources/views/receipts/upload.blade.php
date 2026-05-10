@@ -8,7 +8,7 @@
     </div>
 
     <section class="pm-card p-5">
-        <form method="POST" action="{{ route('receipts.store') }}" enctype="multipart/form-data" class="space-y-5">
+        <form method="POST" action="{{ route('receipts.store') }}" enctype="multipart/form-data" class="space-y-5" data-upload-form>
             @csrf
             <div>
                 <label class="pm-label" for="receipt">Receipt file</label>
@@ -21,7 +21,26 @@
                 <p class="mt-1">Extracting merchant, date, amount, and payment details. Please review the result before submitting.</p>
             </div>
 
-            <button class="pm-btn-primary w-full" type="submit">Upload Receipt</button>
+            <div class="hidden rounded-lg border border-red-100 bg-white p-4 text-sm text-gray-700" data-upload-loading>
+                <div class="flex items-center gap-3">
+                    <span class="h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-[#F3BEC7] border-t-[#D71920]"></span>
+                    <div>
+                        <p class="font-semibold text-gray-950">Scanning receipt...</p>
+                        <p class="mt-1">Uploading file and reading merchant, date, amount, and payment details.</p>
+                    </div>
+                </div>
+                <div class="mt-4 h-2 overflow-hidden rounded-full bg-[#FDECEC]">
+                    <div class="h-full w-1/2 animate-pulse rounded-full bg-[#D71920]"></div>
+                </div>
+            </div>
+
+            <button class="pm-btn-primary w-full" type="submit" data-upload-button>
+                <span data-upload-button-text>Upload Receipt</span>
+                <span class="hidden items-center gap-2" data-upload-button-loading>
+                    <span class="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"></span>
+                    Scanning...
+                </span>
+            </button>
         </form>
     </section>
 </div>
