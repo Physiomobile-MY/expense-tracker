@@ -25,6 +25,7 @@ class ProfileController extends Controller
 
         if ($validated['password'] ?? null) {
             $validated['password'] = Hash::make($validated['password']);
+            $validated['must_change_password'] = false;
         } else {
             unset($validated['password']);
         }

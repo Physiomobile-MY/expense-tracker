@@ -11,6 +11,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExpenseRecordController;
 use App\Http\Controllers\ExpenseWorkflowController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\PasswordChangeController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReceiptFileController;
 use App\Http\Controllers\ReceiptUploadController;
@@ -23,8 +24,14 @@ Route::middleware('guest')->group(function (): void {
 });
 
 Route::middleware('auth')->group(function (): void {
-    Route::get('/', DashboardController::class)->name('dashboard');
     Route::post('/logout', [AuthController::class, 'destroy'])->name('logout');
+
+    Route::get('/change-password', [PasswordChangeController::class, 'edit'])->name('password.change');
+    Route::put('/change-password', [PasswordChangeController::class, 'update'])->name('password.update');
+});
+
+Route::middleware(['auth', 'password.changed'])->group(function (): void {
+    Route::get('/', DashboardController::class)->name('dashboard');
 
     Route::get('/upload', [ReceiptUploadController::class, 'create'])->name('receipts.create');
     Route::post('/upload', [ReceiptUploadController::class, 'store'])->name('receipts.store');

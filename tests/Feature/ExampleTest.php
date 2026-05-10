@@ -24,18 +24,46 @@ class ExampleTest extends TestCase
         $this->withoutVite();
         $this->seed();
 
-        $response = $this->actingAs(User::where('email', 'director@physiomobile.com')->first())
+        $user = User::where('email', 'nidzamyatimi@physiomobile.com')->first();
+        $user->forceFill(['must_change_password' => false])->save();
+
+        $response = $this->actingAs($user)
             ->get('/');
 
         $response->assertStatus(200);
     }
 
-    public function test_staff_can_upload_receipt_for_manual_review_when_ai_is_not_configured(): void
+    public function test_seeded_directors_must_change_temporary_password(): void
+    {
+        $this->seed();
+
+        $this->assertDatabaseCount('users', 2);
+        $this->assertDatabaseHas('users', [
+            'email' => 'nidzamyatimi@physiomobile.com',
+            'role' => 'director_super_admin',
+            'must_change_password' => true,
+        ]);
+        $this->assertDatabaseHas('users', [
+            'email' => 'saiful@physiomobile.com',
+            'role' => 'director_super_admin',
+            'must_change_password' => true,
+        ]);
+
+        $response = $this->actingAs(User::where('email', 'nidzamyatimi@physiomobile.com')->first())
+            ->get('/');
+
+        $response->assertRedirect('/change-password');
+    }
+
+    public function test_director_can_upload_receipt_for_manual_review_when_ai_is_not_configured(): void
     {
         $this->seed();
         Storage::fake('local');
 
-        $response = $this->actingAs(User::where('email', 'staff@physiomobile.com')->first())
+        $user = User::where('email', 'nidzamyatimi@physiomobile.com')->first();
+        $user->forceFill(['must_change_password' => false])->save();
+
+        $response = $this->actingAs($user)
             ->post('/upload', [
                 'receipt' => UploadedFile::fake()->create('receipt.pdf', 100, 'application/pdf'),
             ]);
@@ -50,7 +78,10 @@ class ExampleTest extends TestCase
     {
         $this->seed();
 
-        $response = $this->actingAs(User::where('email', 'director@physiomobile.com')->first())
+        $user = User::where('email', 'nidzamyatimi@physiomobile.com')->first();
+        $user->forceFill(['must_change_password' => false])->save();
+
+        $response = $this->actingAs($user)
             ->get('/reports/export?format=xlsx');
 
         $response->assertStatus(200);

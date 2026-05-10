@@ -105,27 +105,19 @@ class DatabaseSeeder extends Seeder
         }
 
         $management = Department::where('code', 'MGT')->first();
-        $financeDepartment = Department::where('code', 'FIN')->first();
-        $clinical = Department::where('code', 'CLI')->first();
 
         $users = [
             [
-                'name' => 'Director Super Admin',
-                'email' => 'director@physiomobile.com',
+                'name' => 'Nidzam Yatimi',
+                'email' => 'nidzamyatimi@physiomobile.com',
                 'role' => 'director_super_admin',
                 'department_id' => $management?->id,
             ],
             [
-                'name' => 'Finance Admin',
-                'email' => 'finance@physiomobile.com',
-                'role' => 'admin_finance',
-                'department_id' => $financeDepartment?->id,
-            ],
-            [
-                'name' => 'Staff Member',
-                'email' => 'staff@physiomobile.com',
-                'role' => 'staff',
-                'department_id' => $clinical?->id,
+                'name' => 'Saiful',
+                'email' => 'saiful@physiomobile.com',
+                'role' => 'director_super_admin',
+                'department_id' => $management?->id,
             ],
         ];
 
@@ -134,12 +126,19 @@ class DatabaseSeeder extends Seeder
                 ['email' => $userData['email']],
                 $userData + [
                     'status' => 'active',
+                    'must_change_password' => true,
                     'password' => Hash::make('password'),
                 ]
             );
 
             $user->syncRoles([$userData['role']]);
         }
+
+        User::whereIn('email', [
+            'director@physiomobile.com',
+            'finance@physiomobile.com',
+            'staff@physiomobile.com',
+        ])->update(['status' => 'inactive']);
 
         SystemSetting::updateOrCreate(['key' => 'openai'], [
             'value' => [

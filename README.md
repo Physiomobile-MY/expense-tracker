@@ -39,19 +39,26 @@ AI_DAILY_SCAN_LIMIT=50
 APP_THEME_PRIMARY="#D71920"
 ```
 
-The SQL file includes the MVP schema, departments, expense categories, roles, permissions, OpenAI settings, and demo accounts.
+The SQL file includes the MVP schema, departments, expense categories, roles, permissions, OpenAI settings, and the two initial Director Super Admin accounts.
 
-## Demo Accounts
+## Initial Director Accounts
 
-All demo accounts use password:
+Both initial accounts use temporary password:
 
 ```text
 password
 ```
 
-- `director@physiomobile.com`
-- `finance@physiomobile.com`
-- `staff@physiomobile.com`
+Users must change this password after first login.
+
+- `nidzamyatimi@physiomobile.com`
+- `saiful@physiomobile.com`
+
+To reset these accounts on an existing deployment:
+
+```bash
+php artisan expenseflow:ensure-demo-users
+```
 
 ## Run Locally
 

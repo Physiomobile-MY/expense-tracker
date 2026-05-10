@@ -22,6 +22,7 @@ class User extends Authenticatable
         'manager_id',
         'role',
         'status',
+        'must_change_password',
         'password',
     ];
 
@@ -84,6 +85,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'must_change_password' => 'boolean',
             'password' => 'hashed',
         ];
     }

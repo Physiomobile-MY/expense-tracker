@@ -26,6 +26,10 @@ class AuthController extends Controller
         if (Auth::attempt($credentials + ['status' => 'active'], $remember)) {
             $request->session()->regenerate();
 
+            if ($request->user()->must_change_password) {
+                return redirect()->route('password.change');
+            }
+
             return redirect()->intended(route('dashboard'));
         }
 

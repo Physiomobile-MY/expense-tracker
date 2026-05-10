@@ -21,6 +21,7 @@ return new class extends Migration
             $table->unsignedBigInteger('manager_id')->nullable()->index();
             $table->string('role')->default('staff')->index();
             $table->string('status')->default('active')->index();
+            $table->boolean('must_change_password')->default(false);
             $table->string('password');
             $table->rememberToken();
             $table->timestamps();

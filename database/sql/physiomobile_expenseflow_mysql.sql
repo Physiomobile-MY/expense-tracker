@@ -63,6 +63,7 @@ CREATE TABLE `users` (
     `manager_id` BIGINT UNSIGNED NULL,
     `role` VARCHAR(255) NOT NULL DEFAULT 'staff',
     `status` VARCHAR(255) NOT NULL DEFAULT 'active',
+    `must_change_password` TINYINT(1) NOT NULL DEFAULT 0,
     `password` VARCHAR(255) NOT NULL,
     `remember_token` VARCHAR(100) NULL,
     `created_at` TIMESTAMP NULL,
@@ -393,7 +394,8 @@ INSERT INTO `migrations` (`migration`, `batch`) VALUES
 ('0001_01_01_000001_create_cache_table', 1),
 ('0001_01_01_000002_create_jobs_table', 1),
 ('2026_05_10_031205_create_permission_tables', 1),
-('2026_05_10_031300_create_expenseflow_tables', 1);
+('2026_05_10_031300_create_expenseflow_tables', 1),
+('2026_05_10_060000_add_must_change_password_to_users_table', 1);
 
 INSERT INTO `departments` (`id`, `name`, `code`, `status`, `created_at`, `updated_at`) VALUES
 (1, 'Management', 'MGT', 'active', NOW(), NOW()),
@@ -454,15 +456,13 @@ INSERT INTO `role_has_permissions` (`permission_id`, `role_id`) VALUES
 (1, 2), (4, 2), (5, 2), (6, 2), (7, 2), (8, 2), (12, 2),
 (2, 3), (3, 3);
 
-INSERT INTO `users` (`id`, `name`, `email`, `email_verified_at`, `phone`, `department_id`, `manager_id`, `role`, `status`, `password`, `remember_token`, `created_at`, `updated_at`) VALUES
-(1, 'Director Super Admin', 'director@physiomobile.com', NOW(), NULL, 1, NULL, 'director_super_admin', 'active', '$2y$12$4yL7euiRUTR4FUZXA3p8seAdoi5J7HY1qTpCTrjf85I.XVM1/v9l2', NULL, NOW(), NOW()),
-(2, 'Finance Admin', 'finance@physiomobile.com', NOW(), NULL, 2, NULL, 'admin_finance', 'active', '$2y$12$4yL7euiRUTR4FUZXA3p8seAdoi5J7HY1qTpCTrjf85I.XVM1/v9l2', NULL, NOW(), NOW()),
-(3, 'Staff Member', 'staff@physiomobile.com', NOW(), NULL, 8, NULL, 'staff', 'active', '$2y$12$4yL7euiRUTR4FUZXA3p8seAdoi5J7HY1qTpCTrjf85I.XVM1/v9l2', NULL, NOW(), NOW());
+INSERT INTO `users` (`id`, `name`, `email`, `email_verified_at`, `phone`, `department_id`, `manager_id`, `role`, `status`, `must_change_password`, `password`, `remember_token`, `created_at`, `updated_at`) VALUES
+(1, 'Nidzam Yatimi', 'nidzamyatimi@physiomobile.com', NOW(), NULL, 1, NULL, 'director_super_admin', 'active', 1, '$2y$12$4yL7euiRUTR4FUZXA3p8seAdoi5J7HY1qTpCTrjf85I.XVM1/v9l2', NULL, NOW(), NOW()),
+(2, 'Saiful', 'saiful@physiomobile.com', NOW(), NULL, 1, NULL, 'director_super_admin', 'active', 1, '$2y$12$4yL7euiRUTR4FUZXA3p8seAdoi5J7HY1qTpCTrjf85I.XVM1/v9l2', NULL, NOW(), NOW());
 
 INSERT INTO `model_has_roles` (`role_id`, `model_type`, `model_id`) VALUES
 (1, 'App\\Models\\User', 1),
-(2, 'App\\Models\\User', 2),
-(3, 'App\\Models\\User', 3);
+(1, 'App\\Models\\User', 2);
 
 INSERT INTO `system_settings` (`id`, `key`, `value`, `created_at`, `updated_at`) VALUES
 (1, 'openai', JSON_OBJECT('enabled', true, 'model', 'gpt-4.1-mini', 'daily_scan_limit', 50), NOW(), NOW());

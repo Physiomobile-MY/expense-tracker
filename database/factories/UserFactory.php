@@ -31,6 +31,7 @@ class UserFactory extends Factory
             'phone' => fake()->optional()->phoneNumber(),
             'role' => 'staff',
             'status' => 'active',
+            'must_change_password' => false,
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
         ];
