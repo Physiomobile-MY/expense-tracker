@@ -8,9 +8,10 @@ Mobile-first internal expense management and receipt capture for Physiomobile.
 - MySQL
 - Tailwind CSS
 - Spatie Laravel Permission
-- Laravel Excel
 - DomPDF
 - OpenAI Responses API for receipt extraction
+
+Reports export to CSV, native XLSX, and PDF.
 
 ## MySQL Setup
 

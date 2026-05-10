@@ -45,4 +45,15 @@ class ExampleTest extends TestCase
         $this->assertDatabaseCount('expense_receipts', 1);
         $this->assertDatabaseHas('ai_extraction_logs', ['status' => 'failed']);
     }
+
+    public function test_director_can_export_native_xlsx_report(): void
+    {
+        $this->seed();
+
+        $response = $this->actingAs(User::where('email', 'director@physiomobile.com')->first())
+            ->get('/reports/export?format=xlsx');
+
+        $response->assertStatus(200);
+        $response->assertHeader('content-disposition');
+    }
 }
