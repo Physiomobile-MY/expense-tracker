@@ -13,6 +13,10 @@ return [
         'staff' => 'Staff',
     ],
 
+    'notifications' => [
+        'finance_approval_email' => env('FINANCE_APPROVAL_EMAIL', 'finance@physiomobile.com'),
+    ],
+
     'claimable_statuses' => [
         'draft' => 'Draft',
         'submitted' => 'Submitted',

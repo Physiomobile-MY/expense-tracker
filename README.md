@@ -36,6 +36,7 @@ OPENAI_API_KEY=
 OPENAI_RECEIPT_MODEL=gpt-4.1-mini
 AI_RECEIPT_EXTRACTION_ENABLED=true
 AI_DAILY_SCAN_LIMIT=50
+FINANCE_APPROVAL_EMAIL=finance@physiomobile.com
 APP_THEME_PRIMARY="#D71920"
 ```
 
@@ -58,6 +59,31 @@ To reset these accounts on an existing deployment:
 
 ```bash
 php artisan expenseflow:ensure-demo-users
+```
+
+## Finance Email Notifications
+
+Claimable expenses email finance when they are submitted for approval and when they are approved.
+
+Configure mail delivery and recipient in `.env`:
+
+```env
+MAIL_MAILER=smtp
+MAIL_HOST=
+MAIL_PORT=587
+MAIL_USERNAME=
+MAIL_PASSWORD=
+MAIL_FROM_ADDRESS=no-reply@physiomobile.com
+MAIL_FROM_NAME="${APP_NAME}"
+FINANCE_APPROVAL_EMAIL=finance@physiomobile.com
+```
+
+## Clear Test Expense Records
+
+To delete all expense records, receipts, approvals, AI logs, notifications, and audit logs while keeping users, roles, departments, categories, and settings:
+
+```bash
+php artisan expenseflow:clear-records --force
 ```
 
 ## Run Locally

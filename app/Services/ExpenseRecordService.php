@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Mail\ClaimFinanceNotificationMail;
 use App\Models\AuditLog;
 use App\Models\ExpenseApproval;
 use App\Models\ExpenseNotification;
@@ -12,8 +13,10 @@ use Carbon\Carbon;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class ExpenseRecordService
 {
@@ -104,7 +107,7 @@ class ExpenseRecordService
     {
         $this->ensureEditable($record, $actor);
 
-        return DB::transaction(function () use ($record, $actor, $data): ExpenseRecord {
+        $submittedRecord = DB::transaction(function () use ($record, $actor, $data): ExpenseRecord {
             $record->fill($this->recordPayload($data));
             $record->record_type = $data['record_type'];
             $record->department_id = $record->department_id ?: $actor->department_id;
@@ -154,6 +157,12 @@ class ExpenseRecordService
 
             return $record->refresh();
         });
+
+        if ($submittedRecord->record_type === ExpenseRecord::TYPE_CLAIMABLE) {
+            $this->sendFinanceClaimEmail($submittedRecord, 'submitted');
+        }
+
+        return $submittedRecord;
     }
 
     public function approve(ExpenseRecord $record, User $actor, ?string $remarks = null): ExpenseRecord
@@ -164,7 +173,11 @@ class ExpenseRecordService
             throw ValidationException::withMessages(['status' => 'Only pending claimable records can be approved.']);
         }
 
-        return $this->transition($record, $actor, 'approved', 'approved', $remarks, ['approved_at' => now()]);
+        $approvedRecord = $this->transition($record, $actor, 'approved', 'approved', $remarks, ['approved_at' => now()]);
+
+        $this->sendFinanceClaimEmail($approvedRecord, 'approved', $actor, $remarks);
+
+        return $approvedRecord;
     }
 
     public function reject(ExpenseRecord $record, User $actor, ?string $remarks = null): ExpenseRecord
@@ -342,6 +355,21 @@ class ExpenseRecordService
             'message' => $message,
             'type' => $type,
         ]);
+    }
+
+    private function sendFinanceClaimEmail(ExpenseRecord $record, string $event, ?User $actor = null, ?string $remarks = null): void
+    {
+        $email = config('expenseflow.notifications.finance_approval_email');
+
+        if (! $email) {
+            return;
+        }
+
+        try {
+            Mail::to($email)->send(new ClaimFinanceNotificationMail($record, $event, $actor, $remarks));
+        } catch (Throwable $exception) {
+            report($exception);
+        }
     }
 
     private function notificationTitle(string $action): string
