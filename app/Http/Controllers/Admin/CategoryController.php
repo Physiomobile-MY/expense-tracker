@@ -23,12 +23,15 @@ class CategoryController extends Controller
     {
         abort_unless($request->user()->canManageExpenses(), 403);
 
-        ExpenseCategory::create($request->validate([
+        $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'code' => ['required', 'string', 'max:50', 'unique:expense_categories,code'],
             'description' => ['nullable', 'string'],
+            'keywords_text' => ['nullable', 'string'],
             'status' => ['required', 'in:active,inactive'],
-        ]));
+        ]);
+
+        ExpenseCategory::create($this->categoryPayload($validated));
 
         return back()->with('status', 'Category created.');
     }
@@ -37,13 +40,37 @@ class CategoryController extends Controller
     {
         abort_unless($request->user()->canManageExpenses(), 403);
 
-        $category->update($request->validate([
+        $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'code' => ['required', 'string', 'max:50', 'unique:expense_categories,code,'.$category->id],
             'description' => ['nullable', 'string'],
+            'keywords_text' => ['nullable', 'string'],
             'status' => ['required', 'in:active,inactive'],
-        ]));
+        ]);
+
+        $category->update($this->categoryPayload($validated));
 
         return back()->with('status', 'Category updated.');
+    }
+
+    private function categoryPayload(array $validated): array
+    {
+        return [
+            'name' => $validated['name'],
+            'code' => str($validated['code'])->upper()->replaceMatches('/[^A-Z0-9]+/', '_')->trim('_')->toString(),
+            'description' => $validated['description'] ?? null,
+            'keywords' => $this->parseKeywords($validated['keywords_text'] ?? ''),
+            'status' => $validated['status'],
+        ];
+    }
+
+    private function parseKeywords(?string $keywords): array
+    {
+        return collect(preg_split('/[\r\n,]+/', (string) $keywords))
+            ->map(fn (string $keyword): string => trim($keyword))
+            ->filter()
+            ->unique(fn (string $keyword): string => str($keyword)->lower()->toString())
+            ->values()
+            ->all();
     }
 }

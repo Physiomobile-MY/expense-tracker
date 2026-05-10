@@ -361,34 +361,49 @@ class ExpenseRecordService
             ->lower()
             ->toString();
 
-        $categoryName = match (true) {
-            str_contains($text, 'petronas') || str_contains($text, 'shell') || str_contains($text, 'caltex') || str_contains($text, 'bhp') || str_contains($text, 'petrol') => 'Petrol',
-            str_contains($text, 'parking') => 'Parking',
-            str_contains($text, 'toll') => 'Toll',
-            str_contains($text, 'hotel') || str_contains($text, 'inn ') || str_contains($text, 'accommodation') => 'Accommodation',
-            str_contains($text, 'courier') || str_contains($text, 'delivery') || str_contains($text, 'poslaju') || str_contains($text, 'j&t') => 'Courier / Delivery',
-            str_contains($text, 'software') || str_contains($text, 'subscription') => 'Software Subscription',
-            str_contains($text, 'clinic') => 'Clinic Supplies',
-            str_contains($text, 'medical') || str_contains($text, 'pharmacy') => 'Medical Supplies',
-            str_contains($text, 'restaurant') || str_contains($text, 'cafe') || str_contains($text, 'kopitiam') || str_contains($text, 'nasi') || str_contains($text, 'kopi') || str_contains($text, 'meal') || str_contains($text, 'food') || str_contains($text, 'dine') => 'Meal',
-            default => 'Others',
-        };
+        foreach (ExpenseCategory::query()->where('status', 'active')->orderBy('name')->get() as $category) {
+            if ($category->code === 'OTHERS') {
+                continue;
+            }
 
-        return $this->ensureCategory($categoryName)->id;
+            foreach ($this->categoryKeywords($category) as $keyword) {
+                if ($keyword !== '' && str_contains($text, $keyword)) {
+                    return $category->id;
+                }
+            }
+        }
+
+        return $this->ensureCategory('Others')->id;
     }
 
     private function ensureCategory(string $name): ExpenseCategory
     {
         $code = str($name)->upper()->replaceMatches('/[^A-Z0-9]+/', '_')->trim('_')->toString();
+        $keywords = config('expenseflow.category_keywords.'.$name, []);
 
         return tap(ExpenseCategory::firstOrCreate(
             ['code' => $code],
-            ['name' => $name, 'description' => null, 'status' => 'active']
-        ), function (ExpenseCategory $category) use ($name): void {
+            ['name' => $name, 'description' => null, 'keywords' => $keywords, 'status' => 'active']
+        ), function (ExpenseCategory $category) use ($name, $keywords): void {
             if ($category->status !== 'active' || $category->name !== $name) {
                 $category->forceFill(['name' => $name, 'status' => 'active'])->save();
             }
+
+            if (blank($category->keywords) && filled($keywords)) {
+                $category->forceFill(['keywords' => $keywords])->save();
+            }
         });
+    }
+
+    private function categoryKeywords(ExpenseCategory $category): array
+    {
+        $keywords = $category->keywords ?: config('expenseflow.category_keywords.'.$category->name, []);
+
+        return collect($keywords)
+            ->map(fn ($keyword): string => str((string) $keyword)->lower()->trim()->toString())
+            ->filter()
+            ->values()
+            ->all();
     }
 
     private function syncItems(ExpenseRecord $record, array $items): void

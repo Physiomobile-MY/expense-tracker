@@ -67,6 +67,8 @@ To create or repair the default departments and expense categories:
 php artisan expenseflow:ensure-catalog
 ```
 
+Category auto-matching is configurable in **Categories**. Add comma-separated keywords to a category, for example `kopitiam, nasi, kopi` for `Meal`. Receipt merchant names, descriptions, and line items are checked against those keywords when a user submits without choosing a category.
+
 ## Finance Email Notifications
 
 Claimable expenses email finance when they are submitted for approval and when they are approved.

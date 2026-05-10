@@ -37,6 +37,30 @@ return [
         'voided' => 'Voided',
     ],
 
+    'category_keywords' => [
+        'Travel' => ['grab', 'airasia', 'flight', 'taxi', 'train', 'bus', 'transport', 'travel'],
+        'Petrol' => ['petronas', 'shell', 'caltex', 'bhp', 'petrol', 'fuel', 'ron95', 'ron97'],
+        'Mileage' => ['mileage'],
+        'Parking' => ['parking', 'parkir'],
+        'Toll' => ['toll', 'touch n go', 'smart tag', 'rfid'],
+        'Meal' => ['restaurant', 'cafe', 'kopitiam', 'nasi', 'kopi', 'meal', 'food', 'dine', 'ayam', 'makan'],
+        'Accommodation' => ['hotel', 'inn', 'homestay', 'accommodation', 'booking'],
+        'Office Supplies' => ['stationery', 'paper', 'printer', 'office supplies'],
+        'Clinic Supplies' => ['clinic supplies', 'clinic'],
+        'Medical Supplies' => ['medical', 'pharmacy', 'guardian', 'watsons', 'medicine'],
+        'Equipment' => ['equipment', 'device', 'hardware'],
+        'Training' => ['training', 'course', 'workshop', 'seminar'],
+        'Software Subscription' => ['software', 'subscription', 'saas', 'google workspace', 'microsoft', 'openai'],
+        'Marketing' => ['marketing', 'ads', 'advertising', 'printing', 'banner'],
+        'Corporate Event' => ['event', 'corporate event'],
+        'Client Entertainment' => ['client entertainment', 'entertainment'],
+        'Maintenance' => ['maintenance', 'repair', 'service'],
+        'Utilities' => ['utility', 'utilities', 'electric', 'water', 'tnb', 'syabas'],
+        'Internet / Telco' => ['internet', 'telco', 'maxis', 'celcom', 'digi', 'umobile', 'unifi'],
+        'Courier / Delivery' => ['courier', 'delivery', 'poslaju', 'j&t', 'dhl', 'grab express', 'lalamove'],
+        'Others' => [],
+    ],
+
     'receipt_prompt' => <<<'PROMPT'
 You are a receipt extraction assistant for Physiomobile's internal expense management system.
 

@@ -302,11 +302,52 @@ class ExampleTest extends TestCase
             'name' => 'Meal',
             'status' => 'active',
         ]);
+        $this->assertContains('kopitiam', ExpenseCategory::where('code', 'MEAL')->first()->keywords);
         $this->assertDatabaseHas('expense_categories', [
             'code' => 'OTHERS',
             'name' => 'Others',
             'status' => 'active',
         ]);
+    }
+
+    public function test_category_keywords_can_be_configured_and_used_for_auto_matching(): void
+    {
+        $this->seed();
+        Mail::fake();
+
+        $user = User::where('email', 'nidzamyatimi@physiomobile.com')->first();
+        $user->forceFill(['must_change_password' => false])->save();
+
+        $this->actingAs($user)
+            ->post('/admin/categories', [
+                'name' => 'Refreshments',
+                'code' => 'REFRESHMENTS',
+                'description' => 'Drinks and light refreshments',
+                'keywords_text' => "teh tarik\nminuman",
+                'status' => 'active',
+            ])
+            ->assertRedirect();
+
+        $record = ExpenseRecord::create([
+            'user_id' => $user->id,
+            'department_id' => $user->department_id,
+            'status' => 'draft',
+            'currency' => 'MYR',
+        ]);
+
+        $this->actingAs($user)
+            ->put('/records/'.$record->id, [
+                'intent' => 'claimable',
+                'merchant_name' => 'Teh Tarik Station',
+                'receipt_date' => '2026-05-10',
+                'currency' => 'MYR',
+                'total_amount' => '6.50',
+            ])
+            ->assertRedirect();
+
+        $record->refresh();
+
+        $this->assertSame('Refreshments', $record->category?->name);
     }
 
     public function test_finance_email_test_command_sends_to_configured_recipient(): void

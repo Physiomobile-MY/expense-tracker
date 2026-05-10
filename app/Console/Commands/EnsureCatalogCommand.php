@@ -31,34 +31,12 @@ class EnsureCatalogCommand extends Command
             Department::updateOrCreate(['code' => $department['code']], $department + ['status' => 'active']);
         }
 
-        $categories = [
-            'Travel',
-            'Petrol',
-            'Mileage',
-            'Parking',
-            'Toll',
-            'Meal',
-            'Accommodation',
-            'Office Supplies',
-            'Clinic Supplies',
-            'Medical Supplies',
-            'Equipment',
-            'Training',
-            'Software Subscription',
-            'Marketing',
-            'Corporate Event',
-            'Client Entertainment',
-            'Maintenance',
-            'Utilities',
-            'Internet / Telco',
-            'Courier / Delivery',
-            'Others',
-        ];
+        $categories = config('expenseflow.category_keywords');
 
-        foreach ($categories as $category) {
+        foreach ($categories as $category => $keywords) {
             ExpenseCategory::updateOrCreate(
                 ['code' => str($category)->upper()->replaceMatches('/[^A-Z0-9]+/', '_')->trim('_')->toString()],
-                ['name' => $category, 'description' => null, 'status' => 'active']
+                ['name' => $category, 'description' => null, 'keywords' => $keywords, 'status' => 'active']
             );
         }
 

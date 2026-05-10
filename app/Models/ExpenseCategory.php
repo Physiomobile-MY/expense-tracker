@@ -10,7 +10,12 @@ class ExpenseCategory extends Model
         'name',
         'code',
         'description',
+        'keywords',
         'status',
+    ];
+
+    protected $casts = [
+        'keywords' => 'array',
     ];
 
     public function expenseRecords()

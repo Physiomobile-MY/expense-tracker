@@ -19,6 +19,7 @@
             ['label' => 'Approvals', 'href' => route('records.index', ['status' => 'pending_review']), 'active' => request('status') === 'pending_review'],
             ['label' => 'All Records', 'href' => route('records.index'), 'active' => request()->routeIs('records.*')],
             ['label' => 'Users', 'href' => route('admin.users.index'), 'active' => request()->routeIs('admin.users.*')],
+            ['label' => 'Categories', 'href' => route('admin.categories.index'), 'active' => request()->routeIs('admin.categories.*')],
             ['label' => 'Reports', 'href' => route('reports.index'), 'active' => request()->routeIs('reports.*')],
             ['label' => 'Settings', 'href' => route('admin.settings.index'), 'active' => request()->routeIs('admin.settings.*')],
             ['label' => 'Audit', 'href' => route('admin.audit-logs.index'), 'active' => request()->routeIs('admin.audit-logs.*')],

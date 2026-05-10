@@ -24,6 +24,7 @@ return new class extends Migration
             $table->string('name');
             $table->string('code')->unique();
             $table->text('description')->nullable();
+            $table->json('keywords')->nullable();
             $table->string('status')->default('active')->index();
             $table->timestamps();
         });
