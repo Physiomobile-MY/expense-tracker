@@ -37,6 +37,20 @@ class ExpenseReceipt extends Model
         return str_starts_with($this->file_type, 'image/');
     }
 
+    public function isHeic(): bool
+    {
+        $filename = str($this->original_filename)->lower()->toString();
+
+        return in_array($this->file_type, ['image/heic', 'image/heif', 'image/heic-sequence', 'image/heif-sequence'], true)
+            || str_ends_with($filename, '.heic')
+            || str_ends_with($filename, '.heif');
+    }
+
+    public function isPreviewableImage(): bool
+    {
+        return $this->isImage() && ! $this->isHeic();
+    }
+
     public function isPdf(): bool
     {
         return $this->file_type === 'application/pdf';

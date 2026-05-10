@@ -81,6 +81,26 @@ class ExampleTest extends TestCase
         $this->assertDatabaseHas('ai_extraction_logs', ['status' => 'failed']);
     }
 
+    public function test_director_can_upload_heic_receipt(): void
+    {
+        $this->seed();
+        Storage::fake('local');
+
+        $user = User::where('email', 'nidzamyatimi@physiomobile.com')->first();
+        $user->forceFill(['must_change_password' => false])->save();
+
+        $response = $this->actingAs($user)
+            ->post('/upload', [
+                'receipt' => UploadedFile::fake()->create('receipt.heic', 100, 'image/heic'),
+            ]);
+
+        $response->assertRedirect();
+        $this->assertDatabaseCount('expense_records', 1);
+        $this->assertDatabaseHas('expense_receipts', [
+            'original_filename' => 'receipt.heic',
+        ]);
+    }
+
     public function test_director_can_export_native_xlsx_report(): void
     {
         $this->seed();

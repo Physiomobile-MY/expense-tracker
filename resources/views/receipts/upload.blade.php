@@ -12,8 +12,8 @@
             @csrf
             <div>
                 <label class="pm-label" for="receipt">Receipt file</label>
-                <input class="pm-input file:mr-3 file:rounded-md file:border-0 file:bg-[#FDECEC] file:px-3 file:py-2 file:text-sm file:font-semibold file:text-[#A80F16]" id="receipt" name="receipt" type="file" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" required>
-                <p class="mt-2 text-xs text-gray-500">JPG, PNG, or PDF. Maximum 10MB.</p>
+                <input class="pm-input file:mr-3 file:rounded-md file:border-0 file:bg-[#FDECEC] file:px-3 file:py-2 file:text-sm file:font-semibold file:text-[#A80F16]" id="receipt" name="receipt" type="file" accept=".jpg,.jpeg,.png,.heic,.heif,.pdf,image/jpeg,image/png,image/heic,image/heif,application/pdf" required>
+                <p class="mt-2 text-xs text-gray-500">JPG, PNG, HEIC, HEIF, or PDF. Maximum 10MB.</p>
             </div>
 
             <div class="rounded-lg bg-[#FDECEC] p-4 text-sm text-[#A80F16]">

@@ -18,7 +18,9 @@ class ReceiptUploadController extends Controller
     public function store(Request $request, ExpenseRecordService $records): RedirectResponse
     {
         $validated = $request->validate([
-            'receipt' => ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:10240'],
+            'receipt' => ['required', 'file', 'mimes:jpg,jpeg,png,heic,heif,pdf', 'max:10240'],
+        ], [], [
+            'receipt' => 'receipt file',
         ]);
 
         $record = $records->createDraftFromUpload($request->user(), $validated['receipt']);

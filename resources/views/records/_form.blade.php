@@ -20,12 +20,15 @@
                 <h2 class="font-bold text-gray-950">Receipt Preview</h2>
             </div>
             <div class="p-4">
-                @if ($primaryReceipt?->isImage())
+                @if ($primaryReceipt?->isPreviewableImage())
                     <img src="{{ route('receipts.file', $primaryReceipt) }}" alt="Receipt preview" class="max-h-[34rem] w-full rounded-lg border border-gray-200 object-contain">
                 @elseif ($primaryReceipt)
                     <div class="rounded-lg border border-gray-200 bg-gray-50 p-5 text-center">
                         <p class="font-semibold text-gray-900">{{ $primaryReceipt->original_filename }}</p>
-                        <a href="{{ route('receipts.file', $primaryReceipt) }}" class="mt-3 inline-flex text-sm font-semibold text-[#D71920]" target="_blank">Open PDF</a>
+                        @if ($primaryReceipt->isHeic())
+                            <p class="mt-2 text-sm text-gray-500">HEIC preview may not be supported by this browser. You can still save or submit this receipt.</p>
+                        @endif
+                        <a href="{{ route('receipts.file', $primaryReceipt) }}" class="mt-3 inline-flex text-sm font-semibold text-[#D71920]" target="_blank">Open File</a>
                     </div>
                 @else
                     <div class="rounded-lg border border-gray-200 bg-gray-50 p-5 text-center text-sm text-gray-500">No receipt file.</div>

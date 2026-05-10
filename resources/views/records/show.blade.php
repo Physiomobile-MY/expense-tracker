@@ -30,12 +30,15 @@
         </div>
         <div class="p-4">
             @php $receipt = $record->receipts->first(); @endphp
-            @if ($receipt?->isImage())
+            @if ($receipt?->isPreviewableImage())
                 <img src="{{ route('receipts.file', $receipt) }}" alt="Receipt preview" class="max-h-[34rem] w-full rounded-lg border border-gray-200 object-contain">
             @elseif ($receipt)
                 <div class="rounded-lg border border-gray-200 bg-gray-50 p-5 text-center">
                     <p class="font-semibold text-gray-900">{{ $receipt->original_filename }}</p>
-                    <a href="{{ route('receipts.file', $receipt) }}" class="mt-3 inline-flex text-sm font-semibold text-[#D71920]" target="_blank">Open PDF</a>
+                    @if ($receipt->isHeic())
+                        <p class="mt-2 text-sm text-gray-500">HEIC preview may not be supported by this browser.</p>
+                    @endif
+                    <a href="{{ route('receipts.file', $receipt) }}" class="mt-3 inline-flex text-sm font-semibold text-[#D71920]" target="_blank">Open File</a>
                 </div>
             @else
                 <div class="rounded-lg border border-gray-200 bg-gray-50 p-5 text-center text-sm text-gray-500">No receipt file.</div>
