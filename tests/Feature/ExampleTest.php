@@ -123,7 +123,7 @@ class ExampleTest extends TestCase
 
         $response->assertRedirect();
         Mail::assertSent(ClaimFinanceNotificationMail::class, function (ClaimFinanceNotificationMail $mail) use ($record): bool {
-            return $mail->hasTo('finance@physiomobile.com')
+            return $mail->hasTo('finance.hq@physiomobile.com')
                 && $mail->record->id === $record->id
                 && $mail->event === 'submitted';
         });
@@ -159,7 +159,7 @@ class ExampleTest extends TestCase
 
         $response->assertRedirect();
         Mail::assertSent(ClaimFinanceNotificationMail::class, function (ClaimFinanceNotificationMail $mail) use ($record): bool {
-            return $mail->hasTo('finance@physiomobile.com')
+            return $mail->hasTo('finance.hq@physiomobile.com')
                 && $mail->record->id === $record->id
                 && $mail->event === 'approved'
                 && $mail->remarks === 'Approved for payment';
@@ -218,10 +218,10 @@ class ExampleTest extends TestCase
 
     public function test_finance_email_test_command_sends_to_configured_recipient(): void
     {
-        config(['expenseflow.notifications.finance_approval_email' => 'finance@physiomobile.com']);
+        config(['expenseflow.notifications.finance_approval_email' => 'finance.hq@physiomobile.com']);
 
         $this->artisan('expenseflow:test-finance-email')
-            ->expectsOutputToContain('To: finance@physiomobile.com')
+            ->expectsOutputToContain('To: finance.hq@physiomobile.com')
             ->expectsOutputToContain('Test email sent.')
             ->assertSuccessful();
     }

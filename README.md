@@ -36,7 +36,7 @@ OPENAI_API_KEY=
 OPENAI_RECEIPT_MODEL=gpt-4.1-mini
 AI_RECEIPT_EXTRACTION_ENABLED=true
 AI_DAILY_SCAN_LIMIT=50
-FINANCE_APPROVAL_EMAIL=finance@physiomobile.com
+FINANCE_APPROVAL_EMAIL=finance.hq@physiomobile.com
 APP_THEME_PRIMARY="#D71920"
 ```
 
@@ -76,7 +76,7 @@ MAIL_USERNAME=
 MAIL_PASSWORD=
 MAIL_FROM_ADDRESS=no-reply@physiomobile.com
 MAIL_FROM_NAME="${APP_NAME}"
-FINANCE_APPROVAL_EMAIL=finance@physiomobile.com
+FINANCE_APPROVAL_EMAIL=finance.hq@physiomobile.com
 ```
 
 For port `587`, use `MAIL_SCHEME=smtp`. For port `465`, use `MAIL_SCHEME=smtps`. Do not set `MAIL_SCHEME=null` in Laravel Cloud.
