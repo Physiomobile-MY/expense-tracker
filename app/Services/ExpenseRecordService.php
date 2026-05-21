@@ -9,6 +9,7 @@ use App\Models\ExpenseCategory;
 use App\Models\ExpenseNotification;
 use App\Models\ExpenseReceipt;
 use App\Models\ExpenseRecord;
+use App\Models\SystemSetting;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\UploadedFile;
@@ -25,17 +26,20 @@ class ExpenseRecordService
         private readonly DuplicateReceiptService $duplicateReceiptService,
     ) {}
 
-    public function createDraftFromUpload(User $user, UploadedFile $file): ExpenseRecord
+    public function createDraftFromUpload(User $user, UploadedFile $file, string $documentType = ExpenseReceipt::DOCUMENT_TYPE_RECEIPT): ExpenseRecord
     {
-        return DB::transaction(function () use ($user, $file): ExpenseRecord {
+        return DB::transaction(function () use ($user, $file, $documentType): ExpenseRecord {
             $record = ExpenseRecord::create([
                 'user_id' => $user->id,
                 'department_id' => $user->department_id,
                 'status' => 'draft',
                 'currency' => 'MYR',
+                'claim_expense_type' => $documentType === ExpenseReceipt::DOCUMENT_TYPE_WAZE_SCREENSHOT ? 'mileage' : 'receipt',
+                'mileage_rate' => $this->mileageRate(),
             ]);
 
-            $path = Storage::putFile('receipts/'.now()->format('Y/m'), $file);
+            $directory = $documentType === ExpenseReceipt::DOCUMENT_TYPE_WAZE_SCREENSHOT ? 'route-screenshots' : 'receipts';
+            $path = Storage::putFile($directory.'/'.now()->format('Y/m'), $file);
 
             ExpenseReceipt::create([
                 'expense_record_id' => $record->id,
@@ -44,6 +48,7 @@ class ExpenseRecordService
                 'file_type' => $file->getMimeType() ?: $file->getClientMimeType(),
                 'file_size' => $file->getSize(),
                 'uploaded_by' => $user->id,
+                'document_type' => $documentType,
             ]);
 
             $this->audit($user, 'receipt_uploaded', 'expense_records', $record->id, null, [
@@ -56,8 +61,27 @@ class ExpenseRecordService
 
     public function applyExtraction(ExpenseRecord $record, array $data): void
     {
+        $claimExpenseType = $this->claimExpenseTypeFromExtraction($data, $record);
+        $routeDistanceKm = $this->number($data['route_distance_km'] ?? null);
+        $routeTollAmount = $this->number($data['route_toll_amount'] ?? null);
+        $parkingAmount = $this->number($data['parking_amount'] ?? null);
+        $receiptTotal = $this->number($data['total_amount'] ?? null);
+        $mileageRate = $record->mileage_rate ?: $this->mileageRate();
+        $mileageAmount = $routeDistanceKm !== null ? round($routeDistanceKm * $mileageRate, 2) : null;
+
+        if ($parkingAmount === null && $claimExpenseType === 'parking') {
+            $parkingAmount = $receiptTotal;
+        }
+
+        if ($routeTollAmount === null && $claimExpenseType === 'toll') {
+            $routeTollAmount = $receiptTotal;
+        }
+
+        $componentTotal = $this->componentTotal($mileageAmount, $routeTollAmount, $parkingAmount);
+
         $record->fill([
-            'merchant_name' => $data['merchant_name'] ?? $record->merchant_name,
+            'claim_expense_type' => $claimExpenseType,
+            'merchant_name' => $data['merchant_name'] ?? $record->merchant_name ?? ($claimExpenseType === 'mileage' ? 'Waze Route' : null),
             'merchant_address' => $data['merchant_address'] ?? $record->merchant_address,
             'receipt_date' => $data['receipt_date'] ?? $record->receipt_date,
             'receipt_time' => $this->normalizeTime($data['receipt_time'] ?? null) ?? $record->receipt_time,
@@ -66,9 +90,19 @@ class ExpenseRecordService
             'tax_amount' => $data['tax_amount'] ?? $record->tax_amount,
             'service_charge' => $data['service_charge'] ?? $record->service_charge,
             'discount' => $data['discount'] ?? $record->discount,
-            'total_amount' => $data['total_amount'] ?? $record->total_amount,
+            'total_amount' => $componentTotal ?? $receiptTotal ?? $record->total_amount,
             'payment_method' => $data['payment_method'] ?? $record->payment_method,
             'receipt_number' => $data['receipt_number'] ?? $record->receipt_number,
+            'route_origin' => $data['route_origin'] ?? $record->route_origin,
+            'route_destination' => $data['route_destination'] ?? $record->route_destination,
+            'route_summary' => $data['route_summary'] ?? $record->route_summary,
+            'route_distance_km' => $routeDistanceKm ?? $record->route_distance_km,
+            'route_duration_minutes' => $data['route_duration_minutes'] ?? $record->route_duration_minutes,
+            'route_arrival_time' => $data['route_arrival_time'] ?? $record->route_arrival_time,
+            'mileage_rate' => $mileageRate,
+            'mileage_amount' => $mileageAmount ?? $record->mileage_amount,
+            'toll_amount' => $routeTollAmount ?? $record->toll_amount,
+            'parking_amount' => $parkingAmount ?? $record->parking_amount,
             'ai_confidence_score' => $data['confidence_score'] ?? $record->ai_confidence_score,
             'remarks' => $data['notes'] ?? $record->remarks,
         ])->save();
@@ -336,20 +370,37 @@ class ExpenseRecordService
             'project_cost_center',
             'description',
             'remarks',
+            'claim_expense_type',
+            'route_origin',
+            'route_destination',
+            'route_summary',
+            'route_distance_km',
+            'route_duration_minutes',
+            'route_arrival_time',
+            'mileage_rate',
+            'mileage_amount',
+            'toll_amount',
+            'parking_amount',
         ]);
     }
 
     private function recordPayloadWithFallbacks(ExpenseRecord $record, array $data): array
     {
         $payload = $this->recordPayload($data);
+        $payload['claim_expense_type'] = $payload['claim_expense_type'] ?? $record->claim_expense_type ?? 'receipt';
+
+        $payload = $this->applyTravelCalculations($record, $payload);
 
         if (empty($payload['expense_category_id'])) {
-            $payload['expense_category_id'] = $record->expense_category_id ?: $this->inferCategoryId($record, $data);
+            $payload['expense_category_id'] = $record->expense_category_id ?: $this->inferCategoryId($record, array_merge($data, $payload));
         }
 
         if (blank($payload['description'] ?? null)) {
             $merchant = $payload['merchant_name'] ?? $record->merchant_name;
-            $payload['description'] = $merchant ? 'Receipt from '.$merchant : 'Receipt uploaded for expense record.';
+            $destination = $payload['route_destination'] ?? $record->route_destination;
+            $payload['description'] = $destination
+                ? 'Mileage claim to '.$destination
+                : ($merchant ? 'Receipt from '.$merchant : 'Receipt uploaded for expense record.');
         }
 
         return $payload;
@@ -357,7 +408,14 @@ class ExpenseRecordService
 
     private function inferCategoryId(ExpenseRecord $record, array $data): int
     {
-        $text = str($record->merchant_name.' '.($data['merchant_name'] ?? '').' '.($data['description'] ?? ''))
+        $claimType = $data['claim_expense_type'] ?? $record->claim_expense_type;
+
+        if (in_array($claimType, ['mileage', 'toll', 'parking'], true)) {
+            return $this->ensureCategory(str($claimType)->headline()->toString())->id;
+        }
+
+        $text = str($record->merchant_name.' '.($data['merchant_name'] ?? '').' '.($data['description'] ?? '').' '.($claimType ?? ''))
+            ->append(' '.($data['route_destination'] ?? '').' '.($data['route_summary'] ?? ''))
             ->append(' '.collect($data['items'] ?? [])->pluck('description')->implode(' '))
             ->lower()
             ->toString();
@@ -375,6 +433,81 @@ class ExpenseRecordService
         }
 
         return $this->ensureCategory('Others')->id;
+    }
+
+    private function applyTravelCalculations(ExpenseRecord $record, array $payload): array
+    {
+        $distance = $this->number($payload['route_distance_km'] ?? $record->route_distance_km);
+        $rate = $this->number($payload['mileage_rate'] ?? $record->mileage_rate) ?? $this->mileageRate();
+        $mileage = $distance !== null ? round($distance * $rate, 2) : $this->number($payload['mileage_amount'] ?? $record->mileage_amount);
+        $toll = $this->number($payload['toll_amount'] ?? $record->toll_amount);
+        $parking = $this->number($payload['parking_amount'] ?? $record->parking_amount);
+
+        $payload['mileage_rate'] = $rate;
+        $payload['mileage_amount'] = $mileage;
+        $payload['toll_amount'] = $toll;
+        $payload['parking_amount'] = $parking;
+
+        $total = $this->componentTotal($mileage, $toll, $parking);
+        if ($total !== null) {
+            $payload['total_amount'] = $total;
+            $payload['subtotal'] = $payload['subtotal'] ?? $total;
+        }
+
+        if (($payload['claim_expense_type'] ?? null) === 'mileage' && blank($payload['merchant_name'] ?? null)) {
+            $payload['merchant_name'] = $record->merchant_name ?: 'Waze Route';
+        }
+
+        return $payload;
+    }
+
+    private function componentTotal(?float $mileageAmount, ?float $tollAmount, ?float $parkingAmount): ?float
+    {
+        $components = collect([$mileageAmount, $tollAmount, $parkingAmount])->filter(fn ($value): bool => $value !== null);
+
+        if ($components->isEmpty()) {
+            return null;
+        }
+
+        return round((float) $components->sum(), 2);
+    }
+
+    private function mileageRate(): float
+    {
+        $setting = SystemSetting::where('key', 'claims')->first()?->value ?? [];
+
+        return (float) (($setting['mileage_rate'] ?? null) ?: config('expenseflow.mileage.default_rate', 0.50));
+    }
+
+    private function claimExpenseTypeFromExtraction(array $data, ExpenseRecord $record): string
+    {
+        $documentType = str((string) ($data['document_type'] ?? ''))->lower()->toString();
+        $category = str((string) ($data['claim_category'] ?? ''))->lower()->replace(' ', '_')->toString();
+
+        if ($documentType === ExpenseReceipt::DOCUMENT_TYPE_WAZE_SCREENSHOT || filled($data['route_distance_km'] ?? null)) {
+            return 'mileage';
+        }
+
+        if (in_array($category, ['mileage', 'toll', 'parking', 'travel'], true)) {
+            return $category;
+        }
+
+        return $record->claim_expense_type ?: 'receipt';
+    }
+
+    private function number(mixed $value): ?float
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (is_numeric($value)) {
+            return (float) $value;
+        }
+
+        $normalized = preg_replace('/[^0-9.\-]/', '', (string) $value);
+
+        return is_numeric($normalized) ? (float) $normalized : null;
     }
 
     private function ensureCategory(string $name): ExpenseCategory

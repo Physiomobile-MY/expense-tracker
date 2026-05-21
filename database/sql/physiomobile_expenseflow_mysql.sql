@@ -215,6 +215,7 @@ CREATE TABLE `expense_records` (
     `expense_category_id` BIGINT UNSIGNED NULL,
     `claim_reference_no` VARCHAR(255) NULL,
     `record_type` VARCHAR(255) NULL,
+    `claim_expense_type` VARCHAR(255) NULL,
     `merchant_name` VARCHAR(255) NULL,
     `merchant_address` TEXT NULL,
     `receipt_date` DATE NULL,
@@ -228,6 +229,16 @@ CREATE TABLE `expense_records` (
     `payment_method` VARCHAR(255) NULL,
     `receipt_number` VARCHAR(255) NULL,
     `project_cost_center` VARCHAR(255) NULL,
+    `route_origin` VARCHAR(255) NULL,
+    `route_destination` VARCHAR(255) NULL,
+    `route_summary` VARCHAR(255) NULL,
+    `route_distance_km` DECIMAL(8,2) NULL,
+    `route_duration_minutes` INT UNSIGNED NULL,
+    `route_arrival_time` VARCHAR(255) NULL,
+    `mileage_rate` DECIMAL(8,2) NULL,
+    `mileage_amount` DECIMAL(12,2) NULL,
+    `toll_amount` DECIMAL(12,2) NULL,
+    `parking_amount` DECIMAL(12,2) NULL,
     `description` TEXT NULL,
     `remarks` TEXT NULL,
     `status` VARCHAR(255) NOT NULL DEFAULT 'draft',
@@ -248,6 +259,7 @@ CREATE TABLE `expense_records` (
     KEY `expense_records_department_id_foreign` (`department_id`),
     KEY `expense_records_expense_category_id_foreign` (`expense_category_id`),
     KEY `expense_records_record_type_status_index` (`record_type`, `status`),
+    KEY `expense_records_claim_expense_type_index` (`claim_expense_type`),
     KEY `expense_records_merchant_name_index` (`merchant_name`),
     KEY `expense_records_receipt_date_index` (`receipt_date`),
     KEY `expense_records_total_amount_index` (`total_amount`),
@@ -396,7 +408,8 @@ INSERT INTO `migrations` (`migration`, `batch`) VALUES
 ('0001_01_01_000002_create_jobs_table', 1),
 ('2026_05_10_031205_create_permission_tables', 1),
 ('2026_05_10_031300_create_expenseflow_tables', 1),
-('2026_05_10_060000_add_must_change_password_to_users_table', 1);
+('2026_05_10_060000_add_must_change_password_to_users_table', 1),
+('2026_05_21_000000_add_travel_claim_fields_to_expense_records', 1);
 
 INSERT INTO `departments` (`id`, `name`, `code`, `status`, `created_at`, `updated_at`) VALUES
 (1, 'Management', 'MGT', 'active', NOW(), NOW()),
@@ -413,9 +426,9 @@ INSERT INTO `departments` (`id`, `name`, `code`, `status`, `created_at`, `update
 INSERT INTO `expense_categories` (`id`, `name`, `code`, `description`, `keywords`, `status`, `created_at`, `updated_at`) VALUES
 (1, 'Travel', 'TRAVEL', NULL, JSON_ARRAY('grab', 'airasia', 'flight', 'taxi', 'train', 'bus', 'transport', 'travel'), 'active', NOW(), NOW()),
 (2, 'Petrol', 'PETROL', NULL, JSON_ARRAY('petronas', 'shell', 'caltex', 'bhp', 'petrol', 'fuel', 'ron95', 'ron97'), 'active', NOW(), NOW()),
-(3, 'Mileage', 'MILEAGE', NULL, JSON_ARRAY('mileage'), 'active', NOW(), NOW()),
+(3, 'Mileage', 'MILEAGE', NULL, JSON_ARRAY('mileage', 'waze', 'distance', 'km'), 'active', NOW(), NOW()),
 (4, 'Parking', 'PARKING', NULL, JSON_ARRAY('parking', 'parkir'), 'active', NOW(), NOW()),
-(5, 'Toll', 'TOLL', NULL, JSON_ARRAY('toll', 'touch n go', 'smart tag', 'rfid'), 'active', NOW(), NOW()),
+(5, 'Toll', 'TOLL', NULL, JSON_ARRAY('toll', 'tol', 'touch n go', 'smart tag', 'rfid'), 'active', NOW(), NOW()),
 (6, 'Meal', 'MEAL', NULL, JSON_ARRAY('restaurant', 'cafe', 'kopitiam', 'nasi', 'kopi', 'meal', 'food', 'dine', 'ayam', 'makan'), 'active', NOW(), NOW()),
 (7, 'Accommodation', 'ACCOMMODATION', NULL, JSON_ARRAY('hotel', 'inn', 'homestay', 'accommodation', 'booking'), 'active', NOW(), NOW()),
 (8, 'Office Supplies', 'OFFICE_SUPPLIES', NULL, JSON_ARRAY('stationery', 'paper', 'printer', 'office supplies'), 'active', NOW(), NOW()),
@@ -466,4 +479,5 @@ INSERT INTO `model_has_roles` (`role_id`, `model_type`, `model_id`) VALUES
 (1, 'App\\Models\\User', 2);
 
 INSERT INTO `system_settings` (`id`, `key`, `value`, `created_at`, `updated_at`) VALUES
-(1, 'openai', JSON_OBJECT('enabled', true, 'model', 'gpt-4.1-mini', 'daily_scan_limit', 50), NOW(), NOW());
+(1, 'openai', JSON_OBJECT('enabled', true, 'model', 'gpt-4.1-mini', 'daily_scan_limit', 50), NOW(), NOW()),
+(2, 'claims', JSON_OBJECT('mileage_rate', 0.50), NOW(), NOW());

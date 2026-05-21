@@ -34,8 +34,9 @@ class OpenAIReceiptExtractionService
         }
 
         $prompt = config('expenseflow.receipt_prompt');
+        $model = $this->model();
         $payload = [
-            'model' => $this->model(),
+            'model' => $model,
             'instructions' => $prompt,
             'input' => [
                 [
@@ -43,7 +44,9 @@ class OpenAIReceiptExtractionService
                     'content' => [
                         [
                             'type' => 'input_text',
-                            'text' => 'Extract this Physiomobile expense receipt into the requested JSON schema.',
+                            'text' => $receipt->isWazeScreenshot()
+                                ? 'Extract this Physiomobile Waze mileage/toll screenshot into the requested JSON schema.'
+                                : 'Extract this Physiomobile expense receipt into the requested JSON schema.',
                         ],
                         $this->fileInput($receipt, $path),
                     ],
@@ -74,6 +77,7 @@ class OpenAIReceiptExtractionService
         $json = $this->decodeOutput($raw);
 
         return [
+            'model' => $model,
             'prompt' => $prompt,
             'raw_response' => $raw,
             'extracted_json' => $json,
@@ -175,6 +179,8 @@ class OpenAIReceiptExtractionService
             'type' => 'object',
             'additionalProperties' => false,
             'required' => [
+                'document_type',
+                'claim_category',
                 'merchant_name',
                 'merchant_address',
                 'receipt_date',
@@ -187,11 +193,21 @@ class OpenAIReceiptExtractionService
                 'total_amount',
                 'payment_method',
                 'receipt_number',
+                'route_origin',
+                'route_destination',
+                'route_summary',
+                'route_distance_km',
+                'route_duration_minutes',
+                'route_arrival_time',
+                'route_toll_amount',
+                'parking_amount',
                 'items',
                 'confidence_score',
                 'notes',
             ],
             'properties' => [
+                'document_type' => ['type' => ['string', 'null']],
+                'claim_category' => ['type' => ['string', 'null']],
                 'merchant_name' => $nullableString,
                 'merchant_address' => $nullableString,
                 'receipt_date' => $nullableString,
@@ -204,6 +220,14 @@ class OpenAIReceiptExtractionService
                 'total_amount' => $nullableNumber,
                 'payment_method' => $nullableString,
                 'receipt_number' => $nullableString,
+                'route_origin' => $nullableString,
+                'route_destination' => $nullableString,
+                'route_summary' => $nullableString,
+                'route_distance_km' => $nullableNumber,
+                'route_duration_minutes' => ['type' => ['integer', 'null']],
+                'route_arrival_time' => $nullableString,
+                'route_toll_amount' => $nullableNumber,
+                'parking_amount' => $nullableNumber,
                 'items' => [
                     'type' => 'array',
                     'items' => [

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Jobs\ProcessReceiptExtractionJob;
+use App\Models\ExpenseReceipt;
 use App\Services\ExpenseRecordService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,16 +20,24 @@ class ReceiptUploadController extends Controller
     {
         $validated = $request->validate([
             'receipt' => ['required', 'file', 'mimes:jpg,jpeg,png,heic,heif,pdf', 'max:10240'],
+            'document_type' => ['required', 'in:receipt,waze_screenshot'],
         ], [], [
             'receipt' => 'receipt file',
+            'document_type' => 'upload type',
         ]);
 
-        $record = $records->createDraftFromUpload($request->user(), $validated['receipt']);
+        $record = $records->createDraftFromUpload(
+            $request->user(),
+            $validated['receipt'],
+            $validated['document_type'] === ExpenseReceipt::DOCUMENT_TYPE_WAZE_SCREENSHOT
+                ? ExpenseReceipt::DOCUMENT_TYPE_WAZE_SCREENSHOT
+                : ExpenseReceipt::DOCUMENT_TYPE_RECEIPT
+        );
 
         ProcessReceiptExtractionJob::dispatchSync($record->id);
 
         return redirect()
             ->route('records.edit', $record)
-            ->with('status', 'Receipt scanned successfully. Please review the details before saving.');
+            ->with('status', 'Upload scanned successfully. Please review the details before saving.');
     }
 }

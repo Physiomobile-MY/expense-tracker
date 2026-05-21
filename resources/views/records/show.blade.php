@@ -31,6 +31,7 @@
         <div class="p-4">
             @php $receipt = $record->receipts->first(); @endphp
             @if ($receipt?->isPreviewableImage())
+                <p class="mb-2 text-xs font-semibold uppercase text-gray-500">{{ $receipt->documentTypeLabel() }}</p>
                 <img src="{{ route('receipts.file', $receipt) }}" alt="Receipt preview" class="max-h-[34rem] w-full rounded-lg border border-gray-200 object-contain">
             @elseif ($receipt)
                 <div class="rounded-lg border border-gray-200 bg-gray-50 p-5 text-center">
@@ -58,6 +59,7 @@
                 'Receipt Date' => $record->receipt_date?->format('Y-m-d'),
                 'Receipt Time' => $record->receipt_time ? (is_string($record->receipt_time) ? substr($record->receipt_time, 0, 5) : $record->receipt_time->format('H:i')) : null,
                 'Receipt No' => $record->receipt_number,
+                'Claim Type' => $record->claimExpenseTypeLabel(),
                 'Category' => $record->category?->name,
                 'Payment Method' => $record->payment_method,
                 'Project / Cost Center' => $record->project_cost_center,
@@ -79,6 +81,33 @@
         </dl>
     </section>
 </div>
+
+@if ($record->hasTravelClaimDetails())
+    <section class="pm-card mt-4 overflow-hidden">
+        <div class="border-b border-gray-100 px-4 py-3">
+            <h2 class="font-bold text-gray-950">Mileage, Toll & Parking</h2>
+        </div>
+        <dl class="grid gap-px bg-gray-100 text-sm sm:grid-cols-4">
+            @foreach ([
+                'From' => $record->route_origin,
+                'To' => $record->route_destination,
+                'Route / Via' => $record->route_summary,
+                'ETA' => $record->route_arrival_time,
+                'Distance' => $record->route_distance_km ? number_format((float) $record->route_distance_km, 2).' km' : null,
+                'Duration' => $record->route_duration_minutes ? $record->route_duration_minutes.' min' : null,
+                'Mileage Rate' => $record->mileage_rate ? 'MYR '.number_format((float) $record->mileage_rate, 2).' / km' : null,
+                'Mileage Amount' => $record->mileage_amount ? 'MYR '.number_format((float) $record->mileage_amount, 2) : null,
+                'Toll' => $record->toll_amount ? 'MYR '.number_format((float) $record->toll_amount, 2) : null,
+                'Parking' => $record->parking_amount ? 'MYR '.number_format((float) $record->parking_amount, 2) : null,
+            ] as $label => $value)
+                <div class="bg-white p-4">
+                    <dt class="text-xs font-semibold uppercase text-gray-500">{{ $label }}</dt>
+                    <dd class="mt-1 font-medium text-gray-950">{{ $value ?: '-' }}</dd>
+                </div>
+            @endforeach
+        </dl>
+    </section>
+@endif
 
 @php
     $canReviewClaim = $record->record_type === 'claimable' && in_array($record->status, ['submitted', 'pending_review', 'need_clarification'], true);

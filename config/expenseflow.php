@@ -17,6 +17,10 @@ return [
         'finance_approval_email' => env('FINANCE_APPROVAL_EMAIL', 'finance.hq@physiomobile.com'),
     ],
 
+    'mileage' => [
+        'default_rate' => (float) env('EXPENSEFLOW_MILEAGE_RATE', 0.50),
+    ],
+
     'claimable_statuses' => [
         'draft' => 'Draft',
         'submitted' => 'Submitted',
@@ -40,9 +44,9 @@ return [
     'category_keywords' => [
         'Travel' => ['grab', 'airasia', 'flight', 'taxi', 'train', 'bus', 'transport', 'travel'],
         'Petrol' => ['petronas', 'shell', 'caltex', 'bhp', 'petrol', 'fuel', 'ron95', 'ron97'],
-        'Mileage' => ['mileage'],
+        'Mileage' => ['mileage', 'waze', 'distance', 'km'],
         'Parking' => ['parking', 'parkir'],
-        'Toll' => ['toll', 'touch n go', 'smart tag', 'rfid'],
+        'Toll' => ['toll', 'tol', 'touch n go', 'smart tag', 'rfid'],
         'Meal' => ['restaurant', 'cafe', 'kopitiam', 'nasi', 'kopi', 'meal', 'food', 'dine', 'ayam', 'makan'],
         'Accommodation' => ['hotel', 'inn', 'homestay', 'accommodation', 'booking'],
         'Office Supplies' => ['stationery', 'paper', 'printer', 'office supplies'],
@@ -62,9 +66,9 @@ return [
     ],
 
     'receipt_prompt' => <<<'PROMPT'
-You are a receipt extraction assistant for Physiomobile's internal expense management system.
+You are an expense evidence extraction assistant for Physiomobile's internal expense management system.
 
-Analyze the uploaded receipt image or PDF and extract the information into valid JSON only.
+Analyze the uploaded receipt image, PDF, or Waze route screenshot and extract the information into valid JSON only.
 
 Rules:
 - Return JSON only.
@@ -75,6 +79,12 @@ Rules:
 - receipt_date must be in YYYY-MM-DD format if possible.
 - confidence_score should be between 0 and 1.
 - Include all visible receipt line items.
+- document_type should be "receipt" for normal receipts and "waze_screenshot" for Waze/navigation screenshots.
+- claim_category should be one of receipt, mileage, toll, parking, travel, meal, petrol, grab, other.
+- For Waze screenshots, extract destination, visible route/via text, distance in km, duration in minutes, ETA/arrival time, and visible toll amount.
+- For Waze toll text like "TOLL ~RM 4.60" or "Toll ~ RM1.31", put the amount in route_toll_amount.
+- Do not calculate mileage_amount. The system will multiply route_distance_km by the configured mileage rate.
+- For parking receipts or parking screenshots, put the paid parking amount in parking_amount.
 - If the image is blurry, incomplete, or unclear, mention it in notes.
 - Do not guess aggressively.
 - Do not decide whether the receipt is claimable or non-claimable. The user will decide.

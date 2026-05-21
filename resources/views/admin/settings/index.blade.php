@@ -1,10 +1,13 @@
 @extends('layouts.app')
 
 @section('content')
-@php $value = $openai->value ?? []; @endphp
+@php
+    $value = $openai->value ?? [];
+    $claimValue = $claims->value ?? [];
+@endphp
 <div class="mb-5">
     <p class="text-sm font-semibold text-[#D71920]">System Settings</p>
-    <h1 class="text-2xl font-bold text-gray-950">OpenAI Receipt Extraction</h1>
+    <h1 class="text-2xl font-bold text-gray-950">ExpenseFlow Settings</h1>
 </div>
 
 <section class="pm-card p-5">
@@ -25,6 +28,10 @@
         <div>
             <label class="pm-label" for="daily_scan_limit">Daily scan limit</label>
             <input class="pm-input" id="daily_scan_limit" name="daily_scan_limit" type="number" min="0" value="{{ old('daily_scan_limit', $value['daily_scan_limit'] ?? config('services.openai.daily_scan_limit')) }}" required>
+        </div>
+        <div class="border-t border-gray-100 pt-4">
+            <label class="pm-label" for="mileage_rate">Mileage rate per km</label>
+            <input class="pm-input" id="mileage_rate" name="mileage_rate" type="number" min="0" step="0.01" value="{{ old('mileage_rate', $claimValue['mileage_rate'] ?? config('expenseflow.mileage.default_rate')) }}" required>
         </div>
         <button class="pm-btn-primary" type="submit">Save Settings</button>
     </form>

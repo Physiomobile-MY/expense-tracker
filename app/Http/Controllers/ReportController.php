@@ -89,6 +89,12 @@ class ReportController extends Controller
             'Merchant',
             'Receipt Date',
             'Category',
+            'Claim Type',
+            'Distance KM',
+            'Mileage Rate',
+            'Mileage Amount',
+            'Toll Amount',
+            'Parking Amount',
             'Amount',
             'Payment Method',
             'Status',
@@ -111,6 +117,12 @@ class ReportController extends Controller
                 $record->merchant_name,
                 $record->receipt_date?->format('Y-m-d'),
                 $record->category?->name,
+                $record->claimExpenseTypeLabel(),
+                $record->route_distance_km,
+                $record->mileage_rate,
+                $record->mileage_amount,
+                $record->toll_amount,
+                $record->parking_amount,
                 $record->total_amount,
                 $record->payment_method,
                 $record->statusLabel(),
@@ -170,7 +182,7 @@ class ReportController extends Controller
             foreach (array_values($row) as $columnIndex => $value) {
                 $cell = $this->xlsxColumn($columnIndex).$excelRow;
 
-                if (is_numeric($value) && $columnIndex === 7 && $rowIndex > 0) {
+                if (is_numeric($value) && $rowIndex > 0) {
                     $xml .= '<c r="'.$cell.'"><v>'.(float) $value.'</v></c>';
                 } else {
                     $xml .= '<c r="'.$cell.'" t="inlineStr"><is><t>'.$this->xml((string) $value).'</t></is></c>';

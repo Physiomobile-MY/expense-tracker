@@ -72,6 +72,7 @@ class ExampleTest extends TestCase
 
         $response = $this->actingAs($user)
             ->post('/upload', [
+                'document_type' => 'receipt',
                 'receipt' => UploadedFile::fake()->create('receipt.pdf', 100, 'application/pdf'),
             ]);
 
@@ -91,6 +92,7 @@ class ExampleTest extends TestCase
 
         $response = $this->actingAs($user)
             ->post('/upload', [
+                'document_type' => 'receipt',
                 'receipt' => UploadedFile::fake()->create('receipt.heic', 100, 'image/heic'),
             ]);
 
@@ -99,6 +101,49 @@ class ExampleTest extends TestCase
         $this->assertDatabaseHas('expense_receipts', [
             'original_filename' => 'receipt.heic',
         ]);
+    }
+
+    public function test_waze_mileage_claim_calculates_mileage_toll_and_parking_total(): void
+    {
+        $this->seed();
+        Mail::fake();
+
+        $user = User::where('email', 'nidzamyatimi@physiomobile.com')->first();
+        $user->forceFill(['must_change_password' => false])->save();
+
+        $record = ExpenseRecord::create([
+            'user_id' => $user->id,
+            'department_id' => $user->department_id,
+            'status' => 'draft',
+            'currency' => 'MYR',
+            'claim_expense_type' => 'mileage',
+        ]);
+
+        $this->actingAs($user)
+            ->put('/records/'.$record->id, [
+                'intent' => 'claimable',
+                'claim_expense_type' => 'mileage',
+                'receipt_date' => '2026-05-20',
+                'currency' => 'MYR',
+                'route_origin' => 'Shah Alam',
+                'route_destination' => 'Klinik Ehsan Bandar Sri Permaisuri',
+                'route_summary' => 'Via E39 Lebuhraya SPE',
+                'route_distance_km' => '15',
+                'mileage_rate' => '0.50',
+                'toll_amount' => '2.50',
+                'parking_amount' => '5.00',
+                'total_amount' => '1.00',
+            ])
+            ->assertRedirect();
+
+        $record->refresh();
+
+        $this->assertSame('pending_review', $record->status);
+        $this->assertSame('Mileage', $record->category?->name);
+        $this->assertSame('Waze Route', $record->merchant_name);
+        $this->assertSame('7.50', (string) $record->mileage_amount);
+        $this->assertSame('15.00', (string) $record->total_amount);
+        $this->assertSame('Mileage claim to Klinik Ehsan Bandar Sri Permaisuri', $record->description);
     }
 
     public function test_director_can_export_native_xlsx_report(): void

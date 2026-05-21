@@ -8,10 +8,10 @@
     </div>
     <div class="flex gap-2">
         @if (! $user->canManageExpenses())
-            <a href="{{ route('receipts.create') }}" class="pm-btn-primary">Upload Receipt</a>
+            <a href="{{ route('receipts.create') }}" class="pm-btn-primary">Upload Claim</a>
             <a href="{{ route('records.index') }}" class="pm-btn-secondary">My Claims</a>
         @else
-            <a href="{{ route('receipts.create') }}" class="pm-btn-secondary">Upload Receipt</a>
+            <a href="{{ route('receipts.create') }}" class="pm-btn-secondary">Upload Claim</a>
             <a href="{{ route('records.index', ['status' => 'pending_review']) }}" class="pm-btn-primary">Review Claims</a>
             <a href="{{ route('reports.index') }}" class="pm-btn-secondary">Reports</a>
         @endif

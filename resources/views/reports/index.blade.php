@@ -100,7 +100,7 @@
                     <div class="min-w-0">
                         <p class="font-bold text-gray-950">{{ $record->claim_reference_no ?: 'Draft Receipt' }}</p>
                         <p class="mt-1 truncate text-sm text-gray-600">{{ $record->merchant_name ?: '-' }} · {{ $record->user?->name }}</p>
-                        <p class="mt-1 text-xs text-gray-500">{{ $record->department?->name ?: 'No Department' }} · {{ $record->category?->name ?: 'No Category' }}</p>
+                        <p class="mt-1 text-xs text-gray-500">{{ $record->department?->name ?: 'No Department' }} · {{ $record->claimExpenseTypeLabel() }} · {{ $record->category?->name ?: 'No Category' }}</p>
                     </div>
                     <div class="shrink-0 text-right">
                         <p class="font-bold text-gray-950">MYR {{ number_format((float) $record->total_amount, 2) }}</p>

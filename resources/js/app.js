@@ -17,4 +17,36 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+
+    const numberValue = (input) => {
+        const value = Number.parseFloat(input?.value || '');
+
+        return Number.isFinite(value) ? value : 0;
+    };
+
+    const updateTravelTotals = () => {
+        const distance = document.querySelector('[data-mileage-distance]');
+        const rate = document.querySelector('[data-mileage-rate]');
+        const mileageAmount = document.querySelector('[data-mileage-amount]');
+        const totalAmount = document.querySelector('#total_amount');
+        const components = document.querySelectorAll('[data-travel-component]');
+
+        if (!(mileageAmount instanceof HTMLInputElement)) {
+            return;
+        }
+
+        const mileage = numberValue(distance) * numberValue(rate);
+        mileageAmount.value = mileage > 0 ? mileage.toFixed(2) : '';
+
+        const componentTotal = Array.from(components).reduce((total, input) => total + numberValue(input), mileage);
+        if (totalAmount instanceof HTMLInputElement && componentTotal > 0) {
+            totalAmount.value = componentTotal.toFixed(2);
+        }
+    };
+
+    document.querySelectorAll('[data-mileage-distance], [data-mileage-rate], [data-travel-component]').forEach((input) => {
+        input.addEventListener('input', updateTravelTotals);
+    });
+
+    updateTravelTotals();
 });

@@ -123,5 +123,11 @@ class DatabaseSeeder extends Seeder
                 'daily_scan_limit' => (int) config('services.openai.daily_scan_limit'),
             ],
         ]);
+
+        SystemSetting::updateOrCreate(['key' => 'claims'], [
+            'value' => [
+                'mileage_rate' => (float) config('expenseflow.mileage.default_rate', 0.50),
+            ],
+        ]);
     }
 }

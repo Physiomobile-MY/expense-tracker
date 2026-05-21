@@ -20,6 +20,7 @@ class ExpenseRecord extends Model
         'expense_category_id',
         'claim_reference_no',
         'record_type',
+        'claim_expense_type',
         'merchant_name',
         'merchant_address',
         'receipt_date',
@@ -33,6 +34,16 @@ class ExpenseRecord extends Model
         'payment_method',
         'receipt_number',
         'project_cost_center',
+        'route_origin',
+        'route_destination',
+        'route_summary',
+        'route_distance_km',
+        'route_duration_minutes',
+        'route_arrival_time',
+        'mileage_rate',
+        'mileage_amount',
+        'toll_amount',
+        'parking_amount',
         'description',
         'remarks',
         'status',
@@ -54,6 +65,12 @@ class ExpenseRecord extends Model
         'service_charge' => 'decimal:2',
         'discount' => 'decimal:2',
         'total_amount' => 'decimal:2',
+        'route_distance_km' => 'decimal:2',
+        'route_duration_minutes' => 'integer',
+        'mileage_rate' => 'decimal:2',
+        'mileage_amount' => 'decimal:2',
+        'toll_amount' => 'decimal:2',
+        'parking_amount' => 'decimal:2',
         'duplicate_warning' => 'boolean',
         'ai_confidence_score' => 'decimal:4',
         'submitted_at' => 'datetime',
@@ -149,6 +166,26 @@ class ExpenseRecord extends Model
             self::TYPE_NON_CLAIMABLE => 'Non-Claimable',
             default => 'Draft',
         };
+    }
+
+    public function claimExpenseTypeLabel(): string
+    {
+        return match ($this->claim_expense_type) {
+            'mileage' => 'Mileage',
+            'toll' => 'Toll',
+            'parking' => 'Parking',
+            'travel' => 'Travel Claim',
+            'receipt' => 'Receipt',
+            default => $this->category?->name ?: 'Receipt',
+        };
+    }
+
+    public function hasTravelClaimDetails(): bool
+    {
+        return filled($this->route_distance_km)
+            || filled($this->mileage_amount)
+            || filled($this->toll_amount)
+            || filled($this->parking_amount);
     }
 
     public function canBeEditedBy(User $user): bool

@@ -6,7 +6,7 @@
         <p class="text-sm font-semibold text-[#D71920]">{{ auth()->user()->canManageExpenses() ? 'Expense Records' : 'My Records' }}</p>
         <h1 class="text-2xl font-bold text-gray-950">Receipts and Claims</h1>
     </div>
-    <a href="{{ route('receipts.create') }}" class="pm-btn-primary">Upload Receipt</a>
+    <a href="{{ route('receipts.create') }}" class="pm-btn-primary">Upload Claim</a>
 </div>
 
 <section class="pm-card mb-4 p-4">
@@ -69,7 +69,10 @@
                         </div>
                         <p class="mt-1 truncate text-sm text-gray-600">{{ $record->merchant_name ?: 'Merchant not entered' }}</p>
                         <p class="mt-1 text-xs text-gray-500">
-                            {{ $record->recordTypeLabel() }} · {{ $record->category?->name ?: 'No category' }}
+                            {{ $record->recordTypeLabel() }} · {{ $record->claimExpenseTypeLabel() }} · {{ $record->category?->name ?: 'No category' }}
+                            @if ($record->route_distance_km)
+                                · {{ number_format((float) $record->route_distance_km, 2) }} km
+                            @endif
                             @if (auth()->user()->canManageExpenses())
                                 · {{ $record->user?->name }}
                             @endif

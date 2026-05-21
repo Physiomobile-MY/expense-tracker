@@ -21,6 +21,7 @@
             </div>
             <div class="p-4">
                 @if ($primaryReceipt?->isPreviewableImage())
+                    <p class="mb-2 text-xs font-semibold uppercase text-gray-500">{{ $primaryReceipt->documentTypeLabel() }}</p>
                     <img src="{{ route('receipts.file', $primaryReceipt) }}" alt="Receipt preview" class="max-h-[34rem] w-full rounded-lg border border-gray-200 object-contain">
                 @elseif ($primaryReceipt)
                     <div class="rounded-lg border border-gray-200 bg-gray-50 p-5 text-center">
@@ -100,6 +101,20 @@
                     <input class="pm-input" id="payment_method" name="payment_method" value="{{ old('payment_method', $record->payment_method) }}">
                 </div>
                 <div>
+                    <label class="pm-label" for="claim_expense_type">Claim type</label>
+                    <select class="pm-input" id="claim_expense_type" name="claim_expense_type">
+                        @foreach ([
+                            'receipt' => 'Receipt',
+                            'mileage' => 'Mileage',
+                            'toll' => 'Toll',
+                            'parking' => 'Parking',
+                            'travel' => 'Travel Claim',
+                        ] as $value => $label)
+                            <option value="{{ $value }}" @selected(old('claim_expense_type', $record->claim_expense_type ?: 'receipt') === $value)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
                     <label class="pm-label" for="expense_category_id">Expense category</label>
                     <select class="pm-input" id="expense_category_id" name="expense_category_id">
                         <option value="">Select category</option>
@@ -120,6 +135,51 @@
                 <div class="sm:col-span-2">
                     <label class="pm-label" for="project_cost_center">Project / cost center</label>
                     <input class="pm-input" id="project_cost_center" name="project_cost_center" value="{{ old('project_cost_center', $record->project_cost_center) }}">
+                </div>
+                <div class="sm:col-span-2 rounded-lg border border-gray-100 p-3">
+                    <h3 class="font-semibold text-gray-950">Mileage, Toll & Parking</h3>
+                    <div class="mt-3 grid gap-4 sm:grid-cols-2">
+                        <div>
+                            <label class="pm-label" for="route_origin">From</label>
+                            <input class="pm-input" id="route_origin" name="route_origin" value="{{ old('route_origin', $record->route_origin) }}">
+                        </div>
+                        <div>
+                            <label class="pm-label" for="route_destination">To</label>
+                            <input class="pm-input" id="route_destination" name="route_destination" value="{{ old('route_destination', $record->route_destination) }}">
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="pm-label" for="route_summary">Route / via</label>
+                            <input class="pm-input" id="route_summary" name="route_summary" value="{{ old('route_summary', $record->route_summary) }}">
+                        </div>
+                        <div>
+                            <label class="pm-label" for="route_distance_km">Distance (km)</label>
+                            <input class="pm-input" id="route_distance_km" name="route_distance_km" type="number" min="0" step="0.01" value="{{ old('route_distance_km', $record->route_distance_km) }}" data-mileage-distance>
+                        </div>
+                        <div>
+                            <label class="pm-label" for="mileage_rate">Mileage rate / km</label>
+                            <input class="pm-input" id="mileage_rate" name="mileage_rate" type="number" min="0" step="0.01" value="{{ old('mileage_rate', $record->mileage_rate ?: config('expenseflow.mileage.default_rate')) }}" data-mileage-rate>
+                        </div>
+                        <div>
+                            <label class="pm-label" for="mileage_amount">Mileage amount</label>
+                            <input class="pm-input bg-gray-50" id="mileage_amount" name="mileage_amount" type="number" min="0" step="0.01" value="{{ old('mileage_amount', $record->mileage_amount) }}" data-mileage-amount readonly>
+                        </div>
+                        <div>
+                            <label class="pm-label" for="route_duration_minutes">Duration (minutes)</label>
+                            <input class="pm-input" id="route_duration_minutes" name="route_duration_minutes" type="number" min="0" step="1" value="{{ old('route_duration_minutes', $record->route_duration_minutes) }}">
+                        </div>
+                        <div>
+                            <label class="pm-label" for="route_arrival_time">ETA</label>
+                            <input class="pm-input" id="route_arrival_time" name="route_arrival_time" value="{{ old('route_arrival_time', $record->route_arrival_time) }}">
+                        </div>
+                        <div>
+                            <label class="pm-label" for="toll_amount">Toll amount</label>
+                            <input class="pm-input" id="toll_amount" name="toll_amount" type="number" min="0" step="0.01" value="{{ old('toll_amount', $record->toll_amount) }}" data-travel-component>
+                        </div>
+                        <div>
+                            <label class="pm-label" for="parking_amount">Parking amount</label>
+                            <input class="pm-input" id="parking_amount" name="parking_amount" type="number" min="0" step="0.01" value="{{ old('parking_amount', $record->parking_amount) }}" data-travel-component>
+                        </div>
+                    </div>
                 </div>
                 <div class="sm:col-span-2">
                     <label class="pm-label" for="description">Purpose / description</label>

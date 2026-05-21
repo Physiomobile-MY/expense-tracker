@@ -7,6 +7,10 @@ use Illuminate\Support\Facades\Storage;
 
 class ExpenseReceipt extends Model
 {
+    public const DOCUMENT_TYPE_RECEIPT = 'receipt';
+
+    public const DOCUMENT_TYPE_WAZE_SCREENSHOT = 'waze_screenshot';
+
     protected $fillable = [
         'expense_record_id',
         'original_filename',
@@ -54,5 +58,18 @@ class ExpenseReceipt extends Model
     public function isPdf(): bool
     {
         return $this->file_type === 'application/pdf';
+    }
+
+    public function isWazeScreenshot(): bool
+    {
+        return $this->document_type === self::DOCUMENT_TYPE_WAZE_SCREENSHOT;
+    }
+
+    public function documentTypeLabel(): string
+    {
+        return match ($this->document_type) {
+            self::DOCUMENT_TYPE_WAZE_SCREENSHOT => 'Waze Screenshot',
+            default => 'Receipt',
+        };
     }
 }
