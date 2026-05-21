@@ -1,5 +1,6 @@
 @php
     $primaryReceipt = $record->receipts->first();
+    $isRouteScreenshot = $primaryReceipt?->isRouteScreenshot();
     $timeValue = $record->receipt_time ? (is_string($record->receipt_time) ? substr($record->receipt_time, 0, 5) : $record->receipt_time->format('H:i')) : '';
     $items = old('items', $record->items->map(fn ($item) => [
         'description' => $item->description,
@@ -19,7 +20,7 @@
     <div class="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
         <section class="pm-card overflow-hidden">
             <div class="border-b border-gray-100 px-4 py-3">
-                <h2 class="font-bold text-gray-950">Receipt Preview</h2>
+                <h2 class="font-bold text-gray-950">{{ $isRouteScreenshot ? 'Route Preview' : 'Receipt Preview' }}</h2>
             </div>
             <div class="p-4">
                 @if ($primaryReceipt?->isPreviewableImage())
@@ -52,56 +53,68 @@
         </section>
 
         <section class="pm-card p-4">
-            <h2 class="font-bold text-gray-950">Receipt Details</h2>
+            <h2 class="font-bold text-gray-950">{{ $isRouteScreenshot ? 'Journey Details' : 'Receipt Details' }}</h2>
             <div class="mt-4 grid gap-4 sm:grid-cols-2">
-                <div class="sm:col-span-2">
-                    <label class="pm-label" for="merchant_name">Merchant name</label>
-                    <input class="pm-input" id="merchant_name" name="merchant_name" value="{{ old('merchant_name', $record->merchant_name) }}">
-                </div>
-                <div class="sm:col-span-2">
-                    <label class="pm-label" for="merchant_address">Merchant address</label>
-                    <textarea class="pm-input min-h-20" id="merchant_address" name="merchant_address">{{ old('merchant_address', $record->merchant_address) }}</textarea>
-                </div>
+                @if ($isRouteScreenshot)
+                    <input type="hidden" name="merchant_name" value="{{ $record->routeSourceName() }}">
+                    <input type="hidden" name="merchant_address" value="">
+                    <input type="hidden" name="receipt_number" value="">
+                @else
+                    <div class="sm:col-span-2">
+                        <label class="pm-label" for="merchant_name">Merchant name</label>
+                        <input class="pm-input" id="merchant_name" name="merchant_name" value="{{ old('merchant_name', $record->merchant_name) }}">
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="pm-label" for="merchant_address">Merchant address</label>
+                        <textarea class="pm-input min-h-20" id="merchant_address" name="merchant_address">{{ old('merchant_address', $record->merchant_address) }}</textarea>
+                    </div>
+                @endif
                 <div>
-                    <label class="pm-label" for="receipt_date">Receipt date</label>
+                    <label class="pm-label" for="receipt_date">{{ $isRouteScreenshot ? 'Journey date' : 'Receipt date' }}</label>
                     <input class="pm-input" id="receipt_date" name="receipt_date" type="date" value="{{ old('receipt_date', $record->receipt_date?->format('Y-m-d')) }}">
                 </div>
                 <div>
-                    <label class="pm-label" for="receipt_time">Receipt time</label>
+                    <label class="pm-label" for="receipt_time">{{ $isRouteScreenshot ? 'Journey time' : 'Receipt time' }}</label>
                     <input class="pm-input" id="receipt_time" name="receipt_time" type="time" value="{{ old('receipt_time', $timeValue) }}">
                 </div>
-                <div>
-                    <label class="pm-label" for="receipt_number">Receipt number</label>
-                    <input class="pm-input" id="receipt_number" name="receipt_number" value="{{ old('receipt_number', $record->receipt_number) }}">
-                </div>
+                @unless ($isRouteScreenshot)
+                    <div>
+                        <label class="pm-label" for="receipt_number">Receipt number</label>
+                        <input class="pm-input" id="receipt_number" name="receipt_number" value="{{ old('receipt_number', $record->receipt_number) }}">
+                    </div>
+                @endunless
                 <div>
                     <label class="pm-label" for="currency">Currency</label>
                     <input class="pm-input uppercase" id="currency" name="currency" maxlength="3" value="{{ old('currency', $record->currency ?: 'MYR') }}">
                 </div>
-                <div>
-                    <label class="pm-label" for="subtotal">Subtotal</label>
-                    <input class="pm-input" id="subtotal" name="subtotal" type="number" step="0.01" value="{{ old('subtotal', $record->subtotal) }}">
-                </div>
-                <div>
-                    <label class="pm-label" for="tax_amount">Tax amount</label>
-                    <input class="pm-input" id="tax_amount" name="tax_amount" type="number" step="0.01" value="{{ old('tax_amount', $record->tax_amount) }}">
-                </div>
-                <div>
-                    <label class="pm-label" for="service_charge">Service charge</label>
-                    <input class="pm-input" id="service_charge" name="service_charge" type="number" step="0.01" value="{{ old('service_charge', $record->service_charge) }}">
-                </div>
-                <div>
-                    <label class="pm-label" for="discount">Discount</label>
-                    <input class="pm-input" id="discount" name="discount" type="number" step="0.01" value="{{ old('discount', $record->discount) }}">
-                </div>
-                <div>
-                    <label class="pm-label" for="total_amount">Total amount</label>
-                    <input class="pm-input" id="total_amount" name="total_amount" type="number" step="0.01" value="{{ old('total_amount', $record->total_amount) }}">
-                </div>
-                <div>
-                    <label class="pm-label" for="payment_method">Payment method</label>
-                    <input class="pm-input" id="payment_method" name="payment_method" value="{{ old('payment_method', $record->payment_method) }}">
-                </div>
+                @if ($isRouteScreenshot)
+                    <input id="total_amount" name="total_amount" type="hidden" value="{{ old('total_amount', $record->total_amount) }}">
+                @else
+                    <div>
+                        <label class="pm-label" for="subtotal">Subtotal</label>
+                        <input class="pm-input" id="subtotal" name="subtotal" type="number" step="0.01" value="{{ old('subtotal', $record->subtotal) }}">
+                    </div>
+                    <div>
+                        <label class="pm-label" for="tax_amount">Tax amount</label>
+                        <input class="pm-input" id="tax_amount" name="tax_amount" type="number" step="0.01" value="{{ old('tax_amount', $record->tax_amount) }}">
+                    </div>
+                    <div>
+                        <label class="pm-label" for="service_charge">Service charge</label>
+                        <input class="pm-input" id="service_charge" name="service_charge" type="number" step="0.01" value="{{ old('service_charge', $record->service_charge) }}">
+                    </div>
+                    <div>
+                        <label class="pm-label" for="discount">Discount</label>
+                        <input class="pm-input" id="discount" name="discount" type="number" step="0.01" value="{{ old('discount', $record->discount) }}">
+                    </div>
+                    <div>
+                        <label class="pm-label" for="total_amount">Total amount</label>
+                        <input class="pm-input" id="total_amount" name="total_amount" type="number" step="0.01" value="{{ old('total_amount', $record->total_amount) }}">
+                    </div>
+                    <div>
+                        <label class="pm-label" for="payment_method">Payment method</label>
+                        <input class="pm-input" id="payment_method" name="payment_method" value="{{ old('payment_method', $record->payment_method) }}">
+                    </div>
+                @endif
                 <div>
                     <label class="pm-label" for="claim_expense_type">Claim type</label>
                     <select class="pm-input" id="claim_expense_type" name="claim_expense_type">
@@ -194,6 +207,12 @@
                             <label class="pm-label" for="parking_amount">Parking amount</label>
                             <input class="pm-input" id="parking_amount" name="parking_amount" type="number" min="0" step="0.01" value="{{ old('parking_amount', $record->parking_amount) }}" data-travel-component>
                         </div>
+                        @if ($isRouteScreenshot)
+                            <div class="sm:col-span-2">
+                                <label class="pm-label" for="subtotal">Subtotal (mileage + toll + parking)</label>
+                                <input class="pm-input bg-gray-50" id="subtotal" name="subtotal" type="number" min="0" step="0.01" value="{{ old('subtotal', $record->subtotal) }}" readonly>
+                            </div>
+                        @endif
                     </div>
                 </div>
                 <div class="sm:col-span-2">
@@ -208,32 +227,34 @@
         </section>
     </div>
 
-    <section class="pm-card p-4">
-        <h2 class="font-bold text-gray-950">Receipt Items</h2>
-        <div class="mt-4 space-y-3">
-            @for ($i = 0; $i < $itemCount; $i++)
-                @php $item = $items[$i] ?? []; @endphp
-                <div class="grid gap-3 rounded-lg border border-gray-100 p-3 sm:grid-cols-[minmax(0,1.4fr)_0.6fr_0.8fr_0.8fr]">
-                    <div>
-                        <label class="pm-label" for="items_{{ $i }}_description">Description</label>
-                        <input class="pm-input" id="items_{{ $i }}_description" name="items[{{ $i }}][description]" value="{{ $item['description'] ?? '' }}">
+    @unless ($isRouteScreenshot)
+        <section class="pm-card p-4">
+            <h2 class="font-bold text-gray-950">Receipt Items</h2>
+            <div class="mt-4 space-y-3">
+                @for ($i = 0; $i < $itemCount; $i++)
+                    @php $item = $items[$i] ?? []; @endphp
+                    <div class="grid gap-3 rounded-lg border border-gray-100 p-3 sm:grid-cols-[minmax(0,1.4fr)_0.6fr_0.8fr_0.8fr]">
+                        <div>
+                            <label class="pm-label" for="items_{{ $i }}_description">Description</label>
+                            <input class="pm-input" id="items_{{ $i }}_description" name="items[{{ $i }}][description]" value="{{ $item['description'] ?? '' }}">
+                        </div>
+                        <div>
+                            <label class="pm-label" for="items_{{ $i }}_quantity">Qty</label>
+                            <input class="pm-input" id="items_{{ $i }}_quantity" name="items[{{ $i }}][quantity]" type="number" step="0.01" value="{{ $item['quantity'] ?? '' }}">
+                        </div>
+                        <div>
+                            <label class="pm-label" for="items_{{ $i }}_unit_price">Unit price</label>
+                            <input class="pm-input" id="items_{{ $i }}_unit_price" name="items[{{ $i }}][unit_price]" type="number" step="0.01" value="{{ $item['unit_price'] ?? '' }}">
+                        </div>
+                        <div>
+                            <label class="pm-label" for="items_{{ $i }}_amount">Amount</label>
+                            <input class="pm-input" id="items_{{ $i }}_amount" name="items[{{ $i }}][amount]" type="number" step="0.01" value="{{ $item['amount'] ?? '' }}">
+                        </div>
                     </div>
-                    <div>
-                        <label class="pm-label" for="items_{{ $i }}_quantity">Qty</label>
-                        <input class="pm-input" id="items_{{ $i }}_quantity" name="items[{{ $i }}][quantity]" type="number" step="0.01" value="{{ $item['quantity'] ?? '' }}">
-                    </div>
-                    <div>
-                        <label class="pm-label" for="items_{{ $i }}_unit_price">Unit price</label>
-                        <input class="pm-input" id="items_{{ $i }}_unit_price" name="items[{{ $i }}][unit_price]" type="number" step="0.01" value="{{ $item['unit_price'] ?? '' }}">
-                    </div>
-                    <div>
-                        <label class="pm-label" for="items_{{ $i }}_amount">Amount</label>
-                        <input class="pm-input" id="items_{{ $i }}_amount" name="items[{{ $i }}][amount]" type="number" step="0.01" value="{{ $item['amount'] ?? '' }}">
-                    </div>
-                </div>
-            @endfor
-        </div>
-    </section>
+                @endfor
+            </div>
+        </section>
+    @endunless
 
     <div class="rounded-lg border border-gray-200 bg-white p-3 shadow-sm lg:sticky lg:bottom-4 lg:z-20 lg:shadow-lg">
         <div class="grid gap-2 sm:grid-cols-3">

@@ -57,17 +57,21 @@
 <section class="pm-card overflow-hidden">
     <div class="divide-y divide-gray-100">
         @forelse ($records as $record)
+            @php
+                $isRouteScreenshot = $record->primaryReceipt?->isRouteScreenshot();
+                $recordTitle = $isRouteScreenshot ? $record->routeSourceName() : ($record->merchant_name ?: 'Merchant not entered');
+            @endphp
             <a href="{{ route('records.show', $record) }}" class="block px-4 py-4 hover:bg-gray-50">
                 <div class="flex items-start justify-between gap-4">
                     <div class="min-w-0">
                         <div class="flex flex-wrap items-center gap-2">
-                            <p class="font-bold text-gray-950">{{ $record->claim_reference_no ?: 'Draft Receipt' }}</p>
+                            <p class="font-bold text-gray-950">{{ $record->claim_reference_no ?: ($isRouteScreenshot ? 'Draft Route Claim' : 'Draft Receipt') }}</p>
                             @include('partials.status-badge', ['status' => $record->status, 'label' => $record->statusLabel()])
                             @if ($record->duplicate_warning)
                                 <span class="pm-badge bg-red-50 text-red-700">Duplicate</span>
                             @endif
                         </div>
-                        <p class="mt-1 truncate text-sm text-gray-600">{{ $record->merchant_name ?: 'Merchant not entered' }}</p>
+                        <p class="mt-1 truncate text-sm text-gray-600">{{ $recordTitle }}</p>
                         <p class="mt-1 text-xs text-gray-500">
                             {{ $record->recordTypeLabel() }} · {{ $record->claimExpenseTypeLabel() }} · {{ $record->category?->name ?: 'No category' }}
                             @if ($record->route_distance_km)

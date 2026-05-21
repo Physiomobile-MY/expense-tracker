@@ -34,6 +34,9 @@ class ExpenseRecordService
                 'department_id' => $user->department_id,
                 'status' => 'draft',
                 'currency' => 'MYR',
+                'merchant_name' => $documentType !== ExpenseReceipt::DOCUMENT_TYPE_RECEIPT
+                    ? $this->routeMerchantNameForDocumentType($documentType)
+                    : null,
                 'claim_expense_type' => $documentType !== ExpenseReceipt::DOCUMENT_TYPE_RECEIPT ? 'mileage' : 'receipt',
                 'mileage_rate' => $this->mileageRate(),
             ]);
@@ -71,6 +74,7 @@ class ExpenseRecordService
         $receiptTotal = $this->number($data['total_amount'] ?? null);
         $mileageRate = $record->mileage_rate ?: $this->mileageRate();
         $mileageAmount = $routeDistanceKm !== null ? round($routeDistanceKm * $mileageRate, 2) : null;
+        $routeMerchantName = $claimExpenseType === 'mileage' ? $this->routeMerchantName($record, $data) : null;
 
         if ($parkingAmount === null && $claimExpenseType === 'parking') {
             $parkingAmount = $receiptTotal;
@@ -84,18 +88,18 @@ class ExpenseRecordService
 
         $record->fill([
             'claim_expense_type' => $claimExpenseType,
-            'merchant_name' => $data['merchant_name'] ?? $record->merchant_name ?? ($claimExpenseType === 'mileage' ? 'Waze Route' : null),
-            'merchant_address' => $data['merchant_address'] ?? $record->merchant_address,
+            'merchant_name' => $routeMerchantName ?? $data['merchant_name'] ?? $record->merchant_name,
+            'merchant_address' => $claimExpenseType === 'mileage' ? null : ($data['merchant_address'] ?? $record->merchant_address),
             'receipt_date' => $data['receipt_date'] ?? $record->receipt_date,
             'receipt_time' => $this->normalizeTime($data['receipt_time'] ?? null) ?? $record->receipt_time,
             'currency' => $data['currency'] ?? $record->currency ?? 'MYR',
-            'subtotal' => $data['subtotal'] ?? $record->subtotal,
+            'subtotal' => $componentTotal ?? $data['subtotal'] ?? $record->subtotal,
             'tax_amount' => $data['tax_amount'] ?? $record->tax_amount,
             'service_charge' => $data['service_charge'] ?? $record->service_charge,
             'discount' => $data['discount'] ?? $record->discount,
             'total_amount' => $componentTotal ?? $receiptTotal ?? $record->total_amount,
             'payment_method' => $data['payment_method'] ?? $record->payment_method,
-            'receipt_number' => $data['receipt_number'] ?? $record->receipt_number,
+            'receipt_number' => $claimExpenseType === 'mileage' ? null : ($data['receipt_number'] ?? $record->receipt_number),
             'route_origin' => $data['route_origin'] ?? $record->route_origin,
             'route_destination' => $data['route_destination'] ?? $record->route_destination,
             'route_summary' => $data['route_summary'] ?? $record->route_summary,
@@ -458,11 +462,13 @@ class ExpenseRecordService
         $total = $this->componentTotal($mileage, $toll, $parking);
         if ($total !== null) {
             $payload['total_amount'] = $total;
-            $payload['subtotal'] = $payload['subtotal'] ?? $total;
+            $payload['subtotal'] = $total;
         }
 
-        if (($payload['claim_expense_type'] ?? null) === 'mileage' && blank($payload['merchant_name'] ?? null)) {
-            $payload['merchant_name'] = $record->merchant_name ?: 'Waze Route';
+        if (($payload['claim_expense_type'] ?? null) === 'mileage') {
+            $payload['merchant_name'] = $this->routeMerchantName($record);
+            $payload['merchant_address'] = null;
+            $payload['receipt_number'] = null;
         }
 
         return $payload;
@@ -543,6 +549,22 @@ class ExpenseRecordService
     private function sumTollEntries(array $entries): float
     {
         return round((float) collect($entries)->sum('amount'), 2);
+    }
+
+    private function routeMerchantName(ExpenseRecord $record, array $data = []): string
+    {
+        return $this->routeMerchantNameForDocumentType($data['document_type'] ?? null, $record);
+    }
+
+    private function routeMerchantNameForDocumentType(?string $documentType, ?ExpenseRecord $record = null): string
+    {
+        $documentType = $record?->primaryReceipt?->document_type ?: $documentType;
+
+        return match ($documentType) {
+            ExpenseReceipt::DOCUMENT_TYPE_GOOGLE_MAPS_SCREENSHOT => 'Google Maps Route',
+            ExpenseReceipt::DOCUMENT_TYPE_WAZE_SCREENSHOT => 'Waze Route',
+            default => $record?->routeSourceName() ?? 'Waze Route',
+        };
     }
 
     private function ensureCategory(string $name): ExpenseCategory

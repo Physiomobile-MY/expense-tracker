@@ -190,6 +190,33 @@ class ExpenseRecord extends Model
             || filled($this->parking_amount);
     }
 
+    public function hasRouteScreenshot(): bool
+    {
+        return (bool) $this->routeSourceReceipt()?->isRouteScreenshot();
+    }
+
+    public function routeSourceName(): string
+    {
+        return match ($this->routeSourceReceipt()?->document_type) {
+            ExpenseReceipt::DOCUMENT_TYPE_GOOGLE_MAPS_SCREENSHOT => 'Google Maps Route',
+            ExpenseReceipt::DOCUMENT_TYPE_WAZE_SCREENSHOT => 'Waze Route',
+            default => 'Waze Route',
+        };
+    }
+
+    private function routeSourceReceipt(): ?ExpenseReceipt
+    {
+        if ($this->relationLoaded('receipts')) {
+            return $this->receipts->first();
+        }
+
+        if ($this->relationLoaded('primaryReceipt')) {
+            return $this->getRelation('primaryReceipt');
+        }
+
+        return $this->primaryReceipt()->first();
+    }
+
     public function canBeEditedBy(User $user): bool
     {
         if ($user->canManageExpenses()) {

@@ -4,7 +4,8 @@
 <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
     <div>
         <p class="text-sm font-semibold text-[#D71920]">{{ $record->recordTypeLabel() }}</p>
-        <h1 class="text-2xl font-bold text-gray-950">{{ $record->claim_reference_no ?: 'Draft Receipt' }}</h1>
+        @php $headerReceipt = $record->receipts->first(); @endphp
+        <h1 class="text-2xl font-bold text-gray-950">{{ $record->claim_reference_no ?: ($headerReceipt?->isRouteScreenshot() ? 'Draft Route Claim' : 'Draft Receipt') }}</h1>
         <div class="mt-2 flex flex-wrap gap-2">
             @include('partials.status-badge', ['status' => $record->status, 'label' => $record->statusLabel()])
             @if ($record->duplicate_warning)
@@ -26,10 +27,13 @@
 <div class="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
     <section class="pm-card overflow-hidden">
         <div class="border-b border-gray-100 px-4 py-3">
-            <h2 class="font-bold text-gray-950">Receipt</h2>
+            <h2 class="font-bold text-gray-950">{{ $headerReceipt?->isRouteScreenshot() ? 'Route' : 'Receipt' }}</h2>
         </div>
         <div class="p-4">
-            @php $receipt = $record->receipts->first(); @endphp
+            @php
+                $receipt = $record->receipts->first();
+                $isRouteScreenshot = $receipt?->isRouteScreenshot();
+            @endphp
             @if ($receipt?->isPreviewableImage())
                 <p class="mb-2 text-xs font-semibold uppercase text-gray-500">{{ $receipt->documentTypeLabel() }}</p>
                 <img src="{{ route('receipts.file', $receipt) }}" alt="Receipt preview" class="max-h-[34rem] w-full rounded-lg border border-gray-200 object-contain">
@@ -47,24 +51,37 @@
         </div>
     </section>
 
-    <section class="pm-card overflow-hidden">
+    <section class="pm-card overflow-hidden {{ $isRouteScreenshot ? 'lg:col-span-2' : '' }}">
         <div class="border-b border-gray-100 px-4 py-3">
             <h2 class="font-bold text-gray-950">Details</h2>
         </div>
         <dl class="grid gap-px bg-gray-100 text-sm sm:grid-cols-2">
-            @foreach ([
-                'Staff' => $record->user?->name,
-                'Department' => $record->department?->name,
-                'Merchant' => $record->merchant_name,
-                'Receipt Date' => $record->receipt_date?->format('Y-m-d'),
-                'Receipt Time' => $record->receipt_time ? (is_string($record->receipt_time) ? substr($record->receipt_time, 0, 5) : $record->receipt_time->format('H:i')) : null,
-                'Receipt No' => $record->receipt_number,
-                'Claim Type' => $record->claimExpenseTypeLabel(),
-                'Category' => $record->category?->name,
-                'Payment Method' => $record->payment_method,
-                'Project / Cost Center' => $record->project_cost_center,
-                'Total Amount' => 'MYR '.number_format((float) $record->total_amount, 2),
-            ] as $label => $value)
+            @php
+                $detailRows = [
+                    'Staff' => $record->user?->name,
+                    'Department' => $record->department?->name,
+                ];
+
+                if ($isRouteScreenshot) {
+                    $detailRows['Route Source'] = $record->routeSourceName();
+                    $detailRows['Journey Date'] = $record->receipt_date?->format('Y-m-d');
+                    $detailRows['Journey Time'] = $record->receipt_time ? (is_string($record->receipt_time) ? substr($record->receipt_time, 0, 5) : $record->receipt_time->format('H:i')) : null;
+                } else {
+                    $detailRows['Merchant'] = $record->merchant_name;
+                    $detailRows['Receipt Date'] = $record->receipt_date?->format('Y-m-d');
+                    $detailRows['Receipt Time'] = $record->receipt_time ? (is_string($record->receipt_time) ? substr($record->receipt_time, 0, 5) : $record->receipt_time->format('H:i')) : null;
+                    $detailRows['Receipt No'] = $record->receipt_number;
+                    $detailRows['Payment Method'] = $record->payment_method;
+                }
+
+                $detailRows = array_merge($detailRows, [
+                    'Claim Type' => $record->claimExpenseTypeLabel(),
+                    'Category' => $record->category?->name,
+                    'Project / Cost Center' => $record->project_cost_center,
+                    'Total Amount' => 'MYR '.number_format((float) $record->total_amount, 2),
+                ]);
+            @endphp
+            @foreach ($detailRows as $label => $value)
                 <div class="bg-white p-4">
                     <dt class="text-xs font-semibold uppercase text-gray-500">{{ $label }}</dt>
                     <dd class="mt-1 font-medium text-gray-950">{{ $value ?: '-' }}</dd>
@@ -176,24 +193,26 @@
 @include('records._void-form')
 
 <div class="mt-4 grid gap-4 lg:grid-cols-2">
-    <section class="pm-card overflow-hidden">
-        <div class="border-b border-gray-100 px-4 py-3">
-            <h2 class="font-bold text-gray-950">Items</h2>
-        </div>
-        <div class="divide-y divide-gray-100">
-            @forelse ($record->items as $item)
-                <div class="grid grid-cols-[minmax(0,1fr)_auto] gap-3 px-4 py-3 text-sm">
-                    <div>
-                        <p class="font-medium text-gray-950">{{ $item->description ?: '-' }}</p>
-                        <p class="text-gray-500">Qty {{ $item->quantity ?: '-' }} · Unit {{ $item->unit_price ?: '-' }}</p>
+    @unless ($isRouteScreenshot)
+        <section class="pm-card overflow-hidden">
+            <div class="border-b border-gray-100 px-4 py-3">
+                <h2 class="font-bold text-gray-950">Items</h2>
+            </div>
+            <div class="divide-y divide-gray-100">
+                @forelse ($record->items as $item)
+                    <div class="grid grid-cols-[minmax(0,1fr)_auto] gap-3 px-4 py-3 text-sm">
+                        <div>
+                            <p class="font-medium text-gray-950">{{ $item->description ?: '-' }}</p>
+                            <p class="text-gray-500">Qty {{ $item->quantity ?: '-' }} · Unit {{ $item->unit_price ?: '-' }}</p>
+                        </div>
+                        <p class="font-semibold text-gray-950">MYR {{ number_format((float) $item->amount, 2) }}</p>
                     </div>
-                    <p class="font-semibold text-gray-950">MYR {{ number_format((float) $item->amount, 2) }}</p>
-                </div>
-            @empty
-                <div class="px-4 py-8 text-center text-sm text-gray-500">No line items recorded.</div>
-            @endforelse
-        </div>
-    </section>
+                @empty
+                    <div class="px-4 py-8 text-center text-sm text-gray-500">No line items recorded.</div>
+                @endforelse
+            </div>
+        </section>
+    @endunless
 
     <section class="pm-card overflow-hidden">
         <div class="border-b border-gray-100 px-4 py-3">

@@ -153,6 +153,7 @@ class ExampleTest extends TestCase
 
     public function test_google_maps_screenshot_upload_creates_route_claim_draft(): void
     {
+        $this->withoutVite();
         $this->seed();
         Storage::fake('local');
 
@@ -168,11 +169,43 @@ class ExampleTest extends TestCase
 
         $this->assertDatabaseHas('expense_records', [
             'claim_expense_type' => 'mileage',
+            'merchant_name' => 'Google Maps Route',
         ]);
         $this->assertDatabaseHas('expense_receipts', [
             'document_type' => 'google_maps_screenshot',
             'original_filename' => 'google-maps-route.jpg',
         ]);
+
+        $record = ExpenseRecord::with('receipts')->first();
+
+        $this->actingAs($user)
+            ->put('/records/'.$record->id, [
+                'intent' => 'save',
+                'claim_expense_type' => 'mileage',
+                'merchant_name' => 'Waze Route',
+                'receipt_date' => '2026-05-21',
+                'currency' => 'MYR',
+                'route_distance_km' => '10',
+                'mileage_rate' => '0.50',
+                'parking_amount' => '2.00',
+            ])
+            ->assertRedirect();
+
+        $record->refresh();
+
+        $this->assertSame('Google Maps Route', $record->merchant_name);
+        $this->assertSame('7.00', (string) $record->subtotal);
+
+        $this->actingAs($user)
+            ->get('/records/'.$record->id.'/edit')
+            ->assertOk()
+            ->assertSee('Journey Details')
+            ->assertSee('Journey date')
+            ->assertSee('Journey time')
+            ->assertSee('Subtotal (mileage + toll + parking)')
+            ->assertDontSee('Receipt Items')
+            ->assertDontSee('Merchant address')
+            ->assertDontSee('Receipt number');
     }
 
     public function test_director_can_export_native_xlsx_report(): void

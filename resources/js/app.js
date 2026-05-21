@@ -28,6 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const distance = document.querySelector('[data-mileage-distance]');
         const rate = document.querySelector('[data-mileage-rate]');
         const mileageAmount = document.querySelector('[data-mileage-amount]');
+        const subtotalAmount = document.querySelector('#subtotal');
         const totalAmount = document.querySelector('#total_amount');
         const tollTotal = document.querySelector('[data-toll-total]');
         const tollEntries = document.querySelectorAll('[data-toll-entry-amount]');
@@ -46,6 +47,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const componentTotal = Array.from(components).reduce((total, input) => total + numberValue(input), mileage);
+        if (subtotalAmount instanceof HTMLInputElement && componentTotal > 0) {
+            subtotalAmount.value = componentTotal.toFixed(2);
+        }
+
         if (totalAmount instanceof HTMLInputElement && componentTotal > 0) {
             totalAmount.value = componentTotal.toFixed(2);
         }
