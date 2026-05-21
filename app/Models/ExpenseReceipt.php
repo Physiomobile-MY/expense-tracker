@@ -11,6 +11,8 @@ class ExpenseReceipt extends Model
 
     public const DOCUMENT_TYPE_WAZE_SCREENSHOT = 'waze_screenshot';
 
+    public const DOCUMENT_TYPE_GOOGLE_MAPS_SCREENSHOT = 'google_maps_screenshot';
+
     protected $fillable = [
         'expense_record_id',
         'original_filename',
@@ -65,10 +67,19 @@ class ExpenseReceipt extends Model
         return $this->document_type === self::DOCUMENT_TYPE_WAZE_SCREENSHOT;
     }
 
+    public function isRouteScreenshot(): bool
+    {
+        return in_array($this->document_type, [
+            self::DOCUMENT_TYPE_WAZE_SCREENSHOT,
+            self::DOCUMENT_TYPE_GOOGLE_MAPS_SCREENSHOT,
+        ], true);
+    }
+
     public function documentTypeLabel(): string
     {
         return match ($this->document_type) {
             self::DOCUMENT_TYPE_WAZE_SCREENSHOT => 'Waze Screenshot',
+            self::DOCUMENT_TYPE_GOOGLE_MAPS_SCREENSHOT => 'Google Maps Screenshot',
             default => 'Receipt',
         };
     }

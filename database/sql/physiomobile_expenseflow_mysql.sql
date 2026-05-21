@@ -238,6 +238,7 @@ CREATE TABLE `expense_records` (
     `mileage_rate` DECIMAL(8,2) NULL,
     `mileage_amount` DECIMAL(12,2) NULL,
     `toll_amount` DECIMAL(12,2) NULL,
+    `toll_entries` JSON NULL,
     `parking_amount` DECIMAL(12,2) NULL,
     `description` TEXT NULL,
     `remarks` TEXT NULL,
@@ -409,7 +410,8 @@ INSERT INTO `migrations` (`migration`, `batch`) VALUES
 ('2026_05_10_031205_create_permission_tables', 1),
 ('2026_05_10_031300_create_expenseflow_tables', 1),
 ('2026_05_10_060000_add_must_change_password_to_users_table', 1),
-('2026_05_21_000000_add_travel_claim_fields_to_expense_records', 1);
+('2026_05_21_000000_add_travel_claim_fields_to_expense_records', 1),
+('2026_05_21_010000_add_toll_entries_to_expense_records', 1);
 
 INSERT INTO `departments` (`id`, `name`, `code`, `status`, `created_at`, `updated_at`) VALUES
 (1, 'Management', 'MGT', 'active', NOW(), NOW()),

@@ -130,7 +130,10 @@ class ExampleTest extends TestCase
                 'route_summary' => 'Via E39 Lebuhraya SPE',
                 'route_distance_km' => '15',
                 'mileage_rate' => '0.50',
-                'toll_amount' => '2.50',
+                'toll_entries' => [
+                    ['label' => 'SPE Toll', 'amount' => '1.00'],
+                    ['label' => 'Kajang Toll', 'amount' => '1.50'],
+                ],
                 'parking_amount' => '5.00',
                 'total_amount' => '1.00',
             ])
@@ -142,8 +145,34 @@ class ExampleTest extends TestCase
         $this->assertSame('Mileage', $record->category?->name);
         $this->assertSame('Waze Route', $record->merchant_name);
         $this->assertSame('7.50', (string) $record->mileage_amount);
+        $this->assertSame('2.50', (string) $record->toll_amount);
+        $this->assertSame('SPE Toll', $record->toll_entries[0]['label']);
         $this->assertSame('15.00', (string) $record->total_amount);
         $this->assertSame('Mileage claim to Klinik Ehsan Bandar Sri Permaisuri', $record->description);
+    }
+
+    public function test_google_maps_screenshot_upload_creates_route_claim_draft(): void
+    {
+        $this->seed();
+        Storage::fake('local');
+
+        $user = User::where('email', 'nidzamyatimi@physiomobile.com')->first();
+        $user->forceFill(['must_change_password' => false])->save();
+
+        $this->actingAs($user)
+            ->post('/upload', [
+                'document_type' => 'google_maps_screenshot',
+                'receipt' => UploadedFile::fake()->image('google-maps-route.jpg'),
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('expense_records', [
+            'claim_expense_type' => 'mileage',
+        ]);
+        $this->assertDatabaseHas('expense_receipts', [
+            'document_type' => 'google_maps_screenshot',
+            'original_filename' => 'google-maps-route.jpg',
+        ]);
     }
 
     public function test_director_can_export_native_xlsx_report(): void

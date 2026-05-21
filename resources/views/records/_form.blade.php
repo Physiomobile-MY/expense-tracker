@@ -8,6 +8,8 @@
         'amount' => $item->amount,
     ])->toArray());
     $itemCount = max(count($items), 5);
+    $tollEntries = old('toll_entries', $record->toll_entries ?: ($record->toll_amount ? [['label' => 'Toll', 'amount' => $record->toll_amount]] : [[]]));
+    $tollEntryCount = max(count($tollEntries), 1);
 @endphp
 
 <form method="POST" action="{{ route('records.update', $record) }}" class="space-y-5">
@@ -43,7 +45,7 @@
 
                 @if ($record->aiLogs->last()?->status === 'failed')
                     <div class="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-                        We could not read this receipt clearly. You can still enter the details manually.
+                        We could not read this upload automatically. You can still enter the details manually.
                     </div>
                 @endif
             </div>
@@ -171,9 +173,22 @@
                             <label class="pm-label" for="route_arrival_time">ETA</label>
                             <input class="pm-input" id="route_arrival_time" name="route_arrival_time" value="{{ old('route_arrival_time', $record->route_arrival_time) }}">
                         </div>
-                        <div>
-                            <label class="pm-label" for="toll_amount">Toll amount</label>
-                            <input class="pm-input" id="toll_amount" name="toll_amount" type="number" min="0" step="0.01" value="{{ old('toll_amount', $record->toll_amount) }}" data-travel-component>
+                        <div class="sm:col-span-2">
+                            <div class="flex items-center justify-between gap-3">
+                                <label class="pm-label mb-0" for="toll_amount">Tolls</label>
+                                <button class="pm-btn-secondary px-3 py-2 text-sm" type="button" data-add-toll>Add Toll</button>
+                            </div>
+                            <input id="toll_amount" name="toll_amount" type="hidden" value="{{ old('toll_amount', $record->toll_amount) }}" data-travel-component data-toll-total>
+                            <div class="mt-2 space-y-2" data-toll-list>
+                                @for ($i = 0; $i < $tollEntryCount; $i++)
+                                    @php $tollEntry = $tollEntries[$i] ?? []; @endphp
+                                    <div class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_10rem_auto]" data-toll-row>
+                                        <input class="pm-input" name="toll_entries[{{ $i }}][label]" placeholder="Toll name / plaza" value="{{ $tollEntry['label'] ?? '' }}" data-toll-label>
+                                        <input class="pm-input" name="toll_entries[{{ $i }}][amount]" type="number" min="0" step="0.01" placeholder="Amount" value="{{ $tollEntry['amount'] ?? '' }}" data-toll-entry-amount>
+                                        <button class="pm-btn-secondary px-3 py-2" type="button" data-remove-toll>Remove</button>
+                                    </div>
+                                @endfor
+                            </div>
                         </div>
                         <div>
                             <label class="pm-label" for="parking_amount">Parking amount</label>

@@ -15,6 +15,7 @@
                 <select class="pm-input" id="document_type" name="document_type" required>
                     <option value="receipt" @selected(old('document_type') === 'receipt')>Receipt</option>
                     <option value="waze_screenshot" @selected(old('document_type') === 'waze_screenshot')>Waze screenshot</option>
+                    <option value="google_maps_screenshot" @selected(old('document_type') === 'google_maps_screenshot')>Google Maps screenshot</option>
                 </select>
             </div>
             <div>
@@ -25,7 +26,7 @@
 
             <div class="rounded-lg bg-[#FDECEC] p-4 text-sm text-[#A80F16]">
                 <p class="font-semibold">Reading your upload...</p>
-                <p class="mt-1">Extracting receipt details or Waze distance, toll, and route data. Please review the result before submitting.</p>
+                <p class="mt-1">Extracting receipt details or route distance, toll, and map data. Please review the result before submitting.</p>
             </div>
 
             <div class="hidden rounded-lg border border-red-100 bg-white p-4 text-sm text-gray-700" data-upload-loading>

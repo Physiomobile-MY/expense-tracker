@@ -44,8 +44,8 @@ class OpenAIReceiptExtractionService
                     'content' => [
                         [
                             'type' => 'input_text',
-                            'text' => $receipt->isWazeScreenshot()
-                                ? 'Extract this Physiomobile Waze mileage/toll screenshot into the requested JSON schema.'
+                            'text' => $receipt->isRouteScreenshot()
+                                ? 'Extract this Physiomobile route mileage/toll screenshot into the requested JSON schema.'
                                 : 'Extract this Physiomobile expense receipt into the requested JSON schema.',
                         ],
                         $this->fileInput($receipt, $path),
@@ -200,6 +200,7 @@ class OpenAIReceiptExtractionService
                 'route_duration_minutes',
                 'route_arrival_time',
                 'route_toll_amount',
+                'toll_entries',
                 'parking_amount',
                 'items',
                 'confidence_score',
@@ -227,6 +228,18 @@ class OpenAIReceiptExtractionService
                 'route_duration_minutes' => ['type' => ['integer', 'null']],
                 'route_arrival_time' => $nullableString,
                 'route_toll_amount' => $nullableNumber,
+                'toll_entries' => [
+                    'type' => 'array',
+                    'items' => [
+                        'type' => 'object',
+                        'additionalProperties' => false,
+                        'required' => ['label', 'amount'],
+                        'properties' => [
+                            'label' => $nullableString,
+                            'amount' => $nullableNumber,
+                        ],
+                    ],
+                ],
                 'parking_amount' => $nullableNumber,
                 'items' => [
                     'type' => 'array',

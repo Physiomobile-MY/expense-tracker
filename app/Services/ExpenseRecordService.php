@@ -34,11 +34,11 @@ class ExpenseRecordService
                 'department_id' => $user->department_id,
                 'status' => 'draft',
                 'currency' => 'MYR',
-                'claim_expense_type' => $documentType === ExpenseReceipt::DOCUMENT_TYPE_WAZE_SCREENSHOT ? 'mileage' : 'receipt',
+                'claim_expense_type' => $documentType !== ExpenseReceipt::DOCUMENT_TYPE_RECEIPT ? 'mileage' : 'receipt',
                 'mileage_rate' => $this->mileageRate(),
             ]);
 
-            $directory = $documentType === ExpenseReceipt::DOCUMENT_TYPE_WAZE_SCREENSHOT ? 'route-screenshots' : 'receipts';
+            $directory = $documentType !== ExpenseReceipt::DOCUMENT_TYPE_RECEIPT ? 'route-screenshots' : 'receipts';
             $path = Storage::putFile($directory.'/'.now()->format('Y/m'), $file);
 
             ExpenseReceipt::create([
@@ -63,7 +63,10 @@ class ExpenseRecordService
     {
         $claimExpenseType = $this->claimExpenseTypeFromExtraction($data, $record);
         $routeDistanceKm = $this->number($data['route_distance_km'] ?? null);
-        $routeTollAmount = $this->number($data['route_toll_amount'] ?? null);
+        $tollEntries = $this->normalizeTollEntries($data['toll_entries'] ?? []);
+        $routeTollAmount = $tollEntries
+            ? $this->sumTollEntries($tollEntries)
+            : $this->number($data['route_toll_amount'] ?? null);
         $parkingAmount = $this->number($data['parking_amount'] ?? null);
         $receiptTotal = $this->number($data['total_amount'] ?? null);
         $mileageRate = $record->mileage_rate ?: $this->mileageRate();
@@ -102,6 +105,7 @@ class ExpenseRecordService
             'mileage_rate' => $mileageRate,
             'mileage_amount' => $mileageAmount ?? $record->mileage_amount,
             'toll_amount' => $routeTollAmount ?? $record->toll_amount,
+            'toll_entries' => $tollEntries ?: $record->toll_entries,
             'parking_amount' => $parkingAmount ?? $record->parking_amount,
             'ai_confidence_score' => $data['confidence_score'] ?? $record->ai_confidence_score,
             'remarks' => $data['notes'] ?? $record->remarks,
@@ -380,6 +384,7 @@ class ExpenseRecordService
             'mileage_rate',
             'mileage_amount',
             'toll_amount',
+            'toll_entries',
             'parking_amount',
         ]);
     }
@@ -440,12 +445,14 @@ class ExpenseRecordService
         $distance = $this->number($payload['route_distance_km'] ?? $record->route_distance_km);
         $rate = $this->number($payload['mileage_rate'] ?? $record->mileage_rate) ?? $this->mileageRate();
         $mileage = $distance !== null ? round($distance * $rate, 2) : $this->number($payload['mileage_amount'] ?? $record->mileage_amount);
-        $toll = $this->number($payload['toll_amount'] ?? $record->toll_amount);
+        $tollEntries = $this->normalizeTollEntries($payload['toll_entries'] ?? $record->toll_entries ?? []);
+        $toll = $tollEntries ? $this->sumTollEntries($tollEntries) : $this->number($payload['toll_amount'] ?? $record->toll_amount);
         $parking = $this->number($payload['parking_amount'] ?? $record->parking_amount);
 
         $payload['mileage_rate'] = $rate;
         $payload['mileage_amount'] = $mileage;
         $payload['toll_amount'] = $toll;
+        $payload['toll_entries'] = $tollEntries;
         $payload['parking_amount'] = $parking;
 
         $total = $this->componentTotal($mileage, $toll, $parking);
@@ -484,7 +491,10 @@ class ExpenseRecordService
         $documentType = str((string) ($data['document_type'] ?? ''))->lower()->toString();
         $category = str((string) ($data['claim_category'] ?? ''))->lower()->replace(' ', '_')->toString();
 
-        if ($documentType === ExpenseReceipt::DOCUMENT_TYPE_WAZE_SCREENSHOT || filled($data['route_distance_km'] ?? null)) {
+        if (in_array($documentType, [
+            ExpenseReceipt::DOCUMENT_TYPE_WAZE_SCREENSHOT,
+            ExpenseReceipt::DOCUMENT_TYPE_GOOGLE_MAPS_SCREENSHOT,
+        ], true) || filled($data['route_distance_km'] ?? null)) {
             return 'mileage';
         }
 
@@ -508,6 +518,31 @@ class ExpenseRecordService
         $normalized = preg_replace('/[^0-9.\-]/', '', (string) $value);
 
         return is_numeric($normalized) ? (float) $normalized : null;
+    }
+
+    private function normalizeTollEntries(mixed $entries): array
+    {
+        return collect((array) $entries)
+            ->map(function ($entry): ?array {
+                $amount = $this->number($entry['amount'] ?? null);
+
+                if ($amount === null) {
+                    return null;
+                }
+
+                return [
+                    'label' => filled($entry['label'] ?? null) ? (string) $entry['label'] : null,
+                    'amount' => round($amount, 2),
+                ];
+            })
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    private function sumTollEntries(array $entries): float
+    {
+        return round((float) collect($entries)->sum('amount'), 2);
     }
 
     private function ensureCategory(string $name): ExpenseCategory

@@ -94,6 +94,7 @@ class ReportController extends Controller
             'Mileage Rate',
             'Mileage Amount',
             'Toll Amount',
+            'Toll Breakdown',
             'Parking Amount',
             'Amount',
             'Payment Method',
@@ -122,6 +123,7 @@ class ReportController extends Controller
                 $record->mileage_rate,
                 $record->mileage_amount,
                 $record->toll_amount,
+                $this->tollBreakdown($record->toll_entries),
                 $record->parking_amount,
                 $record->total_amount,
                 $record->payment_method,
@@ -136,6 +138,13 @@ class ReportController extends Controller
         }
 
         return $rows;
+    }
+
+    private function tollBreakdown(?array $entries): string
+    {
+        return collect($entries ?? [])
+            ->map(fn (array $entry): string => trim(($entry['label'] ?? 'Toll').' MYR '.number_format((float) ($entry['amount'] ?? 0), 2)))
+            ->implode('; ');
     }
 
     private function csvResponse(array $rows, string $filename): StreamedResponse

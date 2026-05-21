@@ -20,7 +20,7 @@ class ReceiptUploadController extends Controller
     {
         $validated = $request->validate([
             'receipt' => ['required', 'file', 'mimes:jpg,jpeg,png,heic,heif,pdf', 'max:10240'],
-            'document_type' => ['required', 'in:receipt,waze_screenshot'],
+            'document_type' => ['required', 'in:receipt,waze_screenshot,google_maps_screenshot'],
         ], [], [
             'receipt' => 'receipt file',
             'document_type' => 'upload type',
@@ -29,9 +29,10 @@ class ReceiptUploadController extends Controller
         $record = $records->createDraftFromUpload(
             $request->user(),
             $validated['receipt'],
-            $validated['document_type'] === ExpenseReceipt::DOCUMENT_TYPE_WAZE_SCREENSHOT
-                ? ExpenseReceipt::DOCUMENT_TYPE_WAZE_SCREENSHOT
-                : ExpenseReceipt::DOCUMENT_TYPE_RECEIPT
+            in_array($validated['document_type'], [
+                ExpenseReceipt::DOCUMENT_TYPE_WAZE_SCREENSHOT,
+                ExpenseReceipt::DOCUMENT_TYPE_GOOGLE_MAPS_SCREENSHOT,
+            ], true) ? $validated['document_type'] : ExpenseReceipt::DOCUMENT_TYPE_RECEIPT
         );
 
         ProcessReceiptExtractionJob::dispatchSync($record->id);

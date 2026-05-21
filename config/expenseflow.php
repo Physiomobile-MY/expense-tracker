@@ -68,7 +68,7 @@ return [
     'receipt_prompt' => <<<'PROMPT'
 You are an expense evidence extraction assistant for Physiomobile's internal expense management system.
 
-Analyze the uploaded receipt image, PDF, or Waze route screenshot and extract the information into valid JSON only.
+Analyze the uploaded receipt image, PDF, Waze route screenshot, or Google Maps route screenshot and extract the information into valid JSON only.
 
 Rules:
 - Return JSON only.
@@ -79,10 +79,12 @@ Rules:
 - receipt_date must be in YYYY-MM-DD format if possible.
 - confidence_score should be between 0 and 1.
 - Include all visible receipt line items.
-- document_type should be "receipt" for normal receipts and "waze_screenshot" for Waze/navigation screenshots.
+- document_type should be "receipt" for normal receipts, "waze_screenshot" for Waze screenshots, and "google_maps_screenshot" for Google Maps screenshots.
 - claim_category should be one of receipt, mileage, toll, parking, travel, meal, petrol, grab, other.
-- For Waze screenshots, extract destination, visible route/via text, distance in km, duration in minutes, ETA/arrival time, and visible toll amount.
-- For Waze toll text like "TOLL ~RM 4.60" or "Toll ~ RM1.31", put the amount in route_toll_amount.
+- For route screenshots, extract origin, destination, visible route/via text, distance in km, duration in minutes, ETA/arrival time, and visible toll amount.
+- For Waze toll text like "TOLL ~RM 4.60" or "Toll ~ RM1.31", put the amount in route_toll_amount and toll_entries.
+- For Google Maps, extract the distance and ETA. If the screenshot only says "Tolls" without amounts, set route_toll_amount to null and mention that toll amount needs manual entry in notes.
+- If multiple toll amounts are visible, return each one in toll_entries and route_toll_amount should be their sum.
 - Do not calculate mileage_amount. The system will multiply route_distance_km by the configured mileage rate.
 - For parking receipts or parking screenshots, put the paid parking amount in parking_amount.
 - If the image is blurry, incomplete, or unclear, mention it in notes.

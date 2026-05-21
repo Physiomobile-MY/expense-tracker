@@ -106,6 +106,19 @@
                 </div>
             @endforeach
         </dl>
+        @if (filled($record->toll_entries))
+            <div class="border-t border-gray-100 bg-white p-4">
+                <h3 class="text-sm font-bold text-gray-950">Toll Breakdown</h3>
+                <div class="mt-3 divide-y divide-gray-100 rounded-lg border border-gray-100">
+                    @foreach ($record->toll_entries as $entry)
+                        <div class="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                            <span class="text-gray-600">{{ ($entry['label'] ?? null) ?: 'Toll' }}</span>
+                            <span class="font-semibold text-gray-950">MYR {{ number_format((float) $entry['amount'], 2) }}</span>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        @endif
     </section>
 @endif
 
