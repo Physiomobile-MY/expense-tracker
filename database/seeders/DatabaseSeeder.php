@@ -39,6 +39,7 @@ class DatabaseSeeder extends Seeder
 
         $director = Role::firstOrCreate(['name' => 'director_super_admin', 'guard_name' => 'web']);
         $finance = Role::firstOrCreate(['name' => 'admin_finance', 'guard_name' => 'web']);
+        $executive = Role::firstOrCreate(['name' => 'executive', 'guard_name' => 'web']);
         $staff = Role::firstOrCreate(['name' => 'staff', 'guard_name' => 'web']);
 
         $director->syncPermissions($permissions);
@@ -52,6 +53,10 @@ class DatabaseSeeder extends Seeder
             'ai_logs.view',
         ]);
         $staff->syncPermissions([
+            'expense.view_own',
+            'expense.create',
+        ]);
+        $executive->syncPermissions([
             'expense.view_own',
             'expense.create',
         ]);
@@ -81,6 +86,8 @@ class DatabaseSeeder extends Seeder
         }
 
         $management = Department::where('code', 'MGT')->first();
+        $operations = Department::where('code', 'OPS')->first();
+        $clinical = Department::where('code', 'CLI')->first();
 
         $users = [
             [
@@ -94,6 +101,18 @@ class DatabaseSeeder extends Seeder
                 'email' => 'saiful@physiomobile.com',
                 'role' => 'director_super_admin',
                 'department_id' => $management?->id,
+            ],
+            [
+                'name' => 'Executive Staff 1',
+                'email' => 'executive1@physiomobile.com',
+                'role' => 'executive',
+                'department_id' => $operations?->id,
+            ],
+            [
+                'name' => 'Executive Staff 2',
+                'email' => 'executive2@physiomobile.com',
+                'role' => 'executive',
+                'department_id' => $clinical?->id,
             ],
         ];
 

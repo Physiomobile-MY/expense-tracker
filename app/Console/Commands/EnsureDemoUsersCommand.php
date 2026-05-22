@@ -13,7 +13,7 @@ class EnsureDemoUsersCommand extends Command
 {
     protected $signature = 'expenseflow:ensure-demo-users {--password=password}';
 
-    protected $description = 'Create or reset the default Physiomobile ExpenseFlow director users.';
+    protected $description = 'Create or reset the default Physiomobile ExpenseFlow users.';
 
     public function handle(): int
     {
@@ -44,16 +44,35 @@ class EnsureDemoUsersCommand extends Command
             Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web']);
         }
 
-        $roles = ['director_super_admin', 'admin_finance', 'staff'];
+        $roles = ['director_super_admin', 'admin_finance', 'executive', 'staff'];
 
         foreach ($roles as $role) {
             Role::firstOrCreate(['name' => $role, 'guard_name' => 'web']);
         }
 
         Role::where('name', 'director_super_admin')->first()?->syncPermissions($permissions);
+        Role::where('name', 'admin_finance')->first()?->syncPermissions([
+            'expense.view_all',
+            'expense.review',
+            'expense.approve',
+            'expense.reject',
+            'expense.mark_paid',
+            'expense.export',
+            'ai_logs.view',
+        ]);
+        Role::where('name', 'executive')->first()?->syncPermissions([
+            'expense.view_own',
+            'expense.create',
+        ]);
+        Role::where('name', 'staff')->first()?->syncPermissions([
+            'expense.view_own',
+            'expense.create',
+        ]);
 
         $departments = [
             'MGT' => 'Management',
+            'OPS' => 'Operations',
+            'CLI' => 'Clinical',
         ];
 
         foreach ($departments as $code => $name) {
@@ -75,6 +94,18 @@ class EnsureDemoUsersCommand extends Command
                 'email' => 'saiful@physiomobile.com',
                 'role' => 'director_super_admin',
                 'department_code' => 'MGT',
+            ],
+            [
+                'name' => 'Executive Staff 1',
+                'email' => 'executive1@physiomobile.com',
+                'role' => 'executive',
+                'department_code' => 'OPS',
+            ],
+            [
+                'name' => 'Executive Staff 2',
+                'email' => 'executive2@physiomobile.com',
+                'role' => 'executive',
+                'department_code' => 'CLI',
             ],
         ];
 
@@ -103,7 +134,7 @@ class EnsureDemoUsersCommand extends Command
             'staff@physiomobile.com',
         ])->update(['status' => 'inactive']);
 
-        $this->info('Director users are ready. Temporary password: '.$password);
+        $this->info('Default users are ready. Temporary password: '.$password);
         $this->info('Users must change password after first login.');
 
         return self::SUCCESS;

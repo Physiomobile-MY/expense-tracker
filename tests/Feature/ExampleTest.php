@@ -40,11 +40,11 @@ class ExampleTest extends TestCase
         $response->assertStatus(200);
     }
 
-    public function test_seeded_directors_must_change_temporary_password(): void
+    public function test_seeded_default_users_must_change_temporary_password(): void
     {
         $this->seed();
 
-        $this->assertDatabaseCount('users', 2);
+        $this->assertDatabaseCount('users', 4);
         $this->assertDatabaseHas('users', [
             'email' => 'nidzamyatimi@physiomobile.com',
             'role' => 'director_super_admin',
@@ -55,11 +55,87 @@ class ExampleTest extends TestCase
             'role' => 'director_super_admin',
             'must_change_password' => true,
         ]);
+        $this->assertDatabaseHas('users', [
+            'email' => 'executive1@physiomobile.com',
+            'role' => 'executive',
+            'must_change_password' => true,
+        ]);
+        $this->assertDatabaseHas('users', [
+            'email' => 'executive2@physiomobile.com',
+            'role' => 'executive',
+            'must_change_password' => true,
+        ]);
 
         $response = $this->actingAs(User::where('email', 'nidzamyatimi@physiomobile.com')->first())
             ->get('/');
 
         $response->assertRedirect('/change-password');
+    }
+
+    public function test_executive_accounts_are_staff_level_and_only_see_their_own_records(): void
+    {
+        $this->withoutVite();
+        $this->seed();
+
+        $executive = User::where('email', 'executive1@physiomobile.com')->first();
+        $otherExecutive = User::where('email', 'executive2@physiomobile.com')->first();
+        $executive->forceFill(['must_change_password' => false])->save();
+        $otherExecutive->forceFill(['must_change_password' => false])->save();
+        $category = ExpenseCategory::first();
+
+        $ownRecord = ExpenseRecord::create([
+            'user_id' => $executive->id,
+            'department_id' => $executive->department_id,
+            'expense_category_id' => $category->id,
+            'claim_reference_no' => 'PMEXP-202605-01001',
+            'record_type' => ExpenseRecord::TYPE_CLAIMABLE,
+            'merchant_name' => 'Own Executive Merchant',
+            'receipt_date' => '2026-05-10',
+            'currency' => 'MYR',
+            'total_amount' => '42.00',
+            'status' => 'pending_review',
+        ]);
+        $otherRecord = ExpenseRecord::create([
+            'user_id' => $otherExecutive->id,
+            'department_id' => $otherExecutive->department_id,
+            'expense_category_id' => $category->id,
+            'claim_reference_no' => 'PMEXP-202605-01002',
+            'record_type' => ExpenseRecord::TYPE_CLAIMABLE,
+            'merchant_name' => 'Other Executive Merchant',
+            'receipt_date' => '2026-05-10',
+            'currency' => 'MYR',
+            'total_amount' => '84.00',
+            'status' => 'pending_review',
+        ]);
+
+        $this->assertTrue($executive->isStaffLevel());
+        $this->assertFalse($executive->canManageExpenses());
+
+        $this->actingAs($executive)
+            ->get('/')
+            ->assertOk()
+            ->assertSee('My Dashboard')
+            ->assertSee('Executive')
+            ->assertSee('Own Executive Merchant')
+            ->assertDontSee('Other Executive Merchant')
+            ->assertSee('Upload Claim')
+            ->assertDontSee('Reports');
+
+        $this->actingAs($executive)
+            ->get('/records')
+            ->assertOk()
+            ->assertSee($ownRecord->claim_reference_no)
+            ->assertSee('Own Executive Merchant')
+            ->assertDontSee($otherRecord->claim_reference_no)
+            ->assertDontSee('Other Executive Merchant');
+
+        $this->actingAs($executive)
+            ->get('/records/'.$otherRecord->id)
+            ->assertForbidden();
+
+        $this->actingAs($executive)
+            ->get('/reports')
+            ->assertForbidden();
     }
 
     public function test_director_can_upload_receipt_for_manual_review_when_ai_is_not_configured(): void
@@ -369,7 +445,7 @@ class ExampleTest extends TestCase
         $this->artisan('expenseflow:clear-records', ['--force' => true])
             ->assertSuccessful();
 
-        $this->assertDatabaseCount('users', 2);
+        $this->assertDatabaseCount('users', 4);
         $this->assertDatabaseCount('expense_records', 0);
         $this->assertDatabaseCount('expense_receipts', 0);
         $this->assertDatabaseCount('expense_notifications', 0);

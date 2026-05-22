@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class UserController extends Controller
@@ -32,7 +33,7 @@ class UserController extends Controller
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'phone' => ['nullable', 'string', 'max:255'],
             'department_id' => ['nullable', 'exists:departments,id'],
-            'role' => ['required', 'in:director_super_admin,admin_finance,staff'],
+            'role' => ['required', Rule::in(array_keys(config('expenseflow.roles')))],
             'status' => ['required', 'in:active,inactive'],
             'password' => ['required', 'string', 'min:8'],
         ]);
@@ -53,7 +54,7 @@ class UserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:255'],
             'department_id' => ['nullable', 'exists:departments,id'],
-            'role' => ['required', 'in:director_super_admin,admin_finance,staff'],
+            'role' => ['required', Rule::in(array_keys(config('expenseflow.roles')))],
             'status' => ['required', 'in:active,inactive'],
             'password' => ['nullable', 'string', 'min:8'],
         ]);

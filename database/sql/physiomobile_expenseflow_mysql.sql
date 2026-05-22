@@ -465,20 +465,26 @@ INSERT INTO `permissions` (`id`, `name`, `guard_name`, `created_at`, `updated_at
 INSERT INTO `roles` (`id`, `name`, `guard_name`, `created_at`, `updated_at`) VALUES
 (1, 'director_super_admin', 'web', NOW(), NOW()),
 (2, 'admin_finance', 'web', NOW(), NOW()),
-(3, 'staff', 'web', NOW(), NOW());
+(3, 'staff', 'web', NOW(), NOW()),
+(4, 'executive', 'web', NOW(), NOW());
 
 INSERT INTO `role_has_permissions` (`permission_id`, `role_id`) VALUES
 (1, 1), (2, 1), (3, 1), (4, 1), (5, 1), (6, 1), (7, 1), (8, 1), (9, 1), (10, 1), (11, 1), (12, 1),
 (1, 2), (4, 2), (5, 2), (6, 2), (7, 2), (8, 2), (12, 2),
-(2, 3), (3, 3);
+(2, 3), (3, 3),
+(2, 4), (3, 4);
 
 INSERT INTO `users` (`id`, `name`, `email`, `email_verified_at`, `phone`, `department_id`, `manager_id`, `role`, `status`, `must_change_password`, `password`, `remember_token`, `created_at`, `updated_at`) VALUES
 (1, 'Nidzam Yatimi', 'nidzamyatimi@physiomobile.com', NOW(), NULL, 1, NULL, 'director_super_admin', 'active', 1, '$2y$12$4yL7euiRUTR4FUZXA3p8seAdoi5J7HY1qTpCTrjf85I.XVM1/v9l2', NULL, NOW(), NOW()),
-(2, 'Saiful', 'saiful@physiomobile.com', NOW(), NULL, 1, NULL, 'director_super_admin', 'active', 1, '$2y$12$4yL7euiRUTR4FUZXA3p8seAdoi5J7HY1qTpCTrjf85I.XVM1/v9l2', NULL, NOW(), NOW());
+(2, 'Saiful', 'saiful@physiomobile.com', NOW(), NULL, 1, NULL, 'director_super_admin', 'active', 1, '$2y$12$4yL7euiRUTR4FUZXA3p8seAdoi5J7HY1qTpCTrjf85I.XVM1/v9l2', NULL, NOW(), NOW()),
+(3, 'Executive Staff 1', 'executive1@physiomobile.com', NOW(), NULL, 4, NULL, 'executive', 'active', 1, '$2y$12$4yL7euiRUTR4FUZXA3p8seAdoi5J7HY1qTpCTrjf85I.XVM1/v9l2', NULL, NOW(), NOW()),
+(4, 'Executive Staff 2', 'executive2@physiomobile.com', NOW(), NULL, 8, NULL, 'executive', 'active', 1, '$2y$12$4yL7euiRUTR4FUZXA3p8seAdoi5J7HY1qTpCTrjf85I.XVM1/v9l2', NULL, NOW(), NOW());
 
 INSERT INTO `model_has_roles` (`role_id`, `model_type`, `model_id`) VALUES
 (1, 'App\\Models\\User', 1),
-(1, 'App\\Models\\User', 2);
+(1, 'App\\Models\\User', 2),
+(4, 'App\\Models\\User', 3),
+(4, 'App\\Models\\User', 4);
 
 INSERT INTO `system_settings` (`id`, `key`, `value`, `created_at`, `updated_at`) VALUES
 (1, 'openai', JSON_OBJECT('enabled', true, 'model', 'gpt-4.1-mini', 'daily_scan_limit', 50), NOW(), NOW()),

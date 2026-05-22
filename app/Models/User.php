@@ -63,7 +63,8 @@ class User extends Authenticatable
 
     public function isStaffLevel(): bool
     {
-        return $this->role === 'staff' || $this->hasRole('staff');
+        return in_array($this->role, ['staff', 'executive'], true)
+            || $this->hasAnyRole(['staff', 'executive']);
     }
 
     public function canManageExpenses(): bool
