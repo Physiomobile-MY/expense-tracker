@@ -13,7 +13,7 @@ class EnsureDemoUsersCommand extends Command
 {
     protected $signature = 'expenseflow:ensure-demo-users {--password=password}';
 
-    protected $description = 'Create or reset the default Physiomobile ExpenseFlow users.';
+    protected $description = 'Create or reset the default Physiomobile ExpenseFlow director users and roles.';
 
     public function handle(): int
     {
@@ -71,8 +71,6 @@ class EnsureDemoUsersCommand extends Command
 
         $departments = [
             'MGT' => 'Management',
-            'OPS' => 'Operations',
-            'CLI' => 'Clinical',
         ];
 
         foreach ($departments as $code => $name) {
@@ -94,18 +92,6 @@ class EnsureDemoUsersCommand extends Command
                 'email' => 'saiful@physiomobile.com',
                 'role' => 'director_super_admin',
                 'department_code' => 'MGT',
-            ],
-            [
-                'name' => 'Executive Staff 1',
-                'email' => 'executive1@physiomobile.com',
-                'role' => 'executive',
-                'department_code' => 'OPS',
-            ],
-            [
-                'name' => 'Executive Staff 2',
-                'email' => 'executive2@physiomobile.com',
-                'role' => 'executive',
-                'department_code' => 'CLI',
             ],
         ];
 
@@ -134,7 +120,7 @@ class EnsureDemoUsersCommand extends Command
             'staff@physiomobile.com',
         ])->update(['status' => 'inactive']);
 
-        $this->info('Default users are ready. Temporary password: '.$password);
+        $this->info('Director users and roles are ready. Temporary password: '.$password);
         $this->info('Users must change password after first login.');
 
         return self::SUCCESS;

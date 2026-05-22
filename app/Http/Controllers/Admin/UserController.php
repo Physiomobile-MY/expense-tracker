@@ -10,6 +10,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {
@@ -39,6 +41,7 @@ class UserController extends Controller
         ]);
 
         $validated['password'] = Hash::make($validated['password']);
+        $this->ensureConfiguredRole($validated['role']);
 
         $user = User::create($validated);
         $user->syncRoles([$validated['role']]);
@@ -65,9 +68,57 @@ class UserController extends Controller
             unset($validated['password']);
         }
 
+        $this->ensureConfiguredRole($validated['role']);
+
         $user->update($validated);
         $user->syncRoles([$validated['role']]);
 
         return back()->with('status', 'User updated.');
+    }
+
+    private function ensureConfiguredRole(string $roleName): void
+    {
+        $permissions = $this->permissionsForRole($roleName);
+
+        foreach ($permissions as $permission) {
+            Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web']);
+        }
+
+        Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'web'])
+            ->syncPermissions($permissions);
+    }
+
+    private function permissionsForRole(string $roleName): array
+    {
+        return match ($roleName) {
+            'director_super_admin' => [
+                'expense.view_all',
+                'expense.view_own',
+                'expense.create',
+                'expense.review',
+                'expense.approve',
+                'expense.reject',
+                'expense.mark_paid',
+                'expense.export',
+                'settings.manage',
+                'users.manage',
+                'audit.view',
+                'ai_logs.view',
+            ],
+            'admin_finance' => [
+                'expense.view_all',
+                'expense.review',
+                'expense.approve',
+                'expense.reject',
+                'expense.mark_paid',
+                'expense.export',
+                'ai_logs.view',
+            ],
+            'executive', 'staff' => [
+                'expense.view_own',
+                'expense.create',
+            ],
+            default => [],
+        };
     }
 }

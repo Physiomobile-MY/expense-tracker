@@ -86,8 +86,6 @@ class DatabaseSeeder extends Seeder
         }
 
         $management = Department::where('code', 'MGT')->first();
-        $operations = Department::where('code', 'OPS')->first();
-        $clinical = Department::where('code', 'CLI')->first();
 
         $users = [
             [
@@ -101,18 +99,6 @@ class DatabaseSeeder extends Seeder
                 'email' => 'saiful@physiomobile.com',
                 'role' => 'director_super_admin',
                 'department_id' => $management?->id,
-            ],
-            [
-                'name' => 'Executive Staff 1',
-                'email' => 'executive1@physiomobile.com',
-                'role' => 'executive',
-                'department_id' => $operations?->id,
-            ],
-            [
-                'name' => 'Executive Staff 2',
-                'email' => 'executive2@physiomobile.com',
-                'role' => 'executive',
-                'department_id' => $clinical?->id,
             ],
         ];
 

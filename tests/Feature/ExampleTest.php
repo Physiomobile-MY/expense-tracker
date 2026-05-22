@@ -13,6 +13,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class ExampleTest extends TestCase
@@ -40,11 +41,11 @@ class ExampleTest extends TestCase
         $response->assertStatus(200);
     }
 
-    public function test_seeded_default_users_must_change_temporary_password(): void
+    public function test_seeded_directors_must_change_temporary_password(): void
     {
         $this->seed();
 
-        $this->assertDatabaseCount('users', 4);
+        $this->assertDatabaseCount('users', 2);
         $this->assertDatabaseHas('users', [
             'email' => 'nidzamyatimi@physiomobile.com',
             'role' => 'director_super_admin',
@@ -55,15 +56,8 @@ class ExampleTest extends TestCase
             'role' => 'director_super_admin',
             'must_change_password' => true,
         ]);
-        $this->assertDatabaseHas('users', [
-            'email' => 'executive1@physiomobile.com',
-            'role' => 'executive',
-            'must_change_password' => true,
-        ]);
-        $this->assertDatabaseHas('users', [
-            'email' => 'executive2@physiomobile.com',
-            'role' => 'executive',
-            'must_change_password' => true,
+        $this->assertDatabaseHas('roles', [
+            'name' => 'executive',
         ]);
 
         $response = $this->actingAs(User::where('email', 'nidzamyatimi@physiomobile.com')->first())
@@ -72,15 +66,57 @@ class ExampleTest extends TestCase
         $response->assertRedirect('/change-password');
     }
 
+    public function test_director_can_create_executive_user_from_admin(): void
+    {
+        $this->seed();
+
+        $director = User::where('email', 'nidzamyatimi@physiomobile.com')->first();
+        $director->forceFill(['must_change_password' => false])->save();
+
+        Role::where('name', 'executive')->delete();
+
+        $this->actingAs($director)
+            ->post('/admin/users', [
+                'name' => 'Nidzam Executive',
+                'email' => 'nidzam.executive@physiomobile.com',
+                'phone' => null,
+                'department_id' => null,
+                'role' => 'executive',
+                'status' => 'active',
+                'password' => 'password',
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('users', [
+            'name' => 'Nidzam Executive',
+            'email' => 'nidzam.executive@physiomobile.com',
+            'role' => 'executive',
+            'status' => 'active',
+        ]);
+        $this->assertTrue(User::where('email', 'nidzam.executive@physiomobile.com')->first()->hasRole('executive'));
+    }
+
     public function test_executive_accounts_are_staff_level_and_only_see_their_own_records(): void
     {
         $this->withoutVite();
         $this->seed();
 
-        $executive = User::where('email', 'executive1@physiomobile.com')->first();
-        $otherExecutive = User::where('email', 'executive2@physiomobile.com')->first();
-        $executive->forceFill(['must_change_password' => false])->save();
-        $otherExecutive->forceFill(['must_change_password' => false])->save();
+        $executive = User::factory()->create([
+            'name' => 'Nidzam Executive',
+            'email' => 'nidzam.executive@physiomobile.com',
+            'role' => 'executive',
+            'status' => 'active',
+            'must_change_password' => false,
+        ]);
+        $otherExecutive = User::factory()->create([
+            'name' => 'Saiful Executive',
+            'email' => 'saiful.executive@physiomobile.com',
+            'role' => 'executive',
+            'status' => 'active',
+            'must_change_password' => false,
+        ]);
+        $executive->syncRoles(['executive']);
+        $otherExecutive->syncRoles(['executive']);
         $category = ExpenseCategory::first();
 
         $ownRecord = ExpenseRecord::create([
@@ -445,7 +481,7 @@ class ExampleTest extends TestCase
         $this->artisan('expenseflow:clear-records', ['--force' => true])
             ->assertSuccessful();
 
-        $this->assertDatabaseCount('users', 4);
+        $this->assertDatabaseCount('users', 2);
         $this->assertDatabaseCount('expense_records', 0);
         $this->assertDatabaseCount('expense_receipts', 0);
         $this->assertDatabaseCount('expense_notifications', 0);

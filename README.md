@@ -40,11 +40,11 @@ FINANCE_APPROVAL_EMAIL=finance.hq@physiomobile.com
 APP_THEME_PRIMARY="#D71920"
 ```
 
-The SQL file includes the MVP schema, departments, expense categories, roles, permissions, OpenAI settings, and the initial Director Super Admin and Executive accounts.
+The SQL file includes the MVP schema, departments, expense categories, roles, permissions, OpenAI settings, and the two initial Director Super Admin accounts.
 
-## Initial Accounts
+## Initial Director Accounts
 
-All initial accounts use temporary password:
+Both initial accounts use temporary password:
 
 ```text
 password
@@ -52,17 +52,10 @@ password
 
 Users must change this password after first login.
 
-Director Super Admin:
-
 - `nidzamyatimi@physiomobile.com`
 - `saiful@physiomobile.com`
 
-Executive staff-level accounts:
-
-- `executive1@physiomobile.com`
-- `executive2@physiomobile.com`
-
-Executive accounts have the same claim upload and record features as staff, but can only see their own expense data.
+Directors can create staff-level Executive users in **Administration > Users** by choosing the `Executive` role. Executive users have the same claim upload and own-record workflow as staff, but can only see their own expense data.
 
 To reset these accounts on an existing deployment:
 
