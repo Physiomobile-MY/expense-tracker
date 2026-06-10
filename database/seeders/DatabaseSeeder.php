@@ -4,7 +4,9 @@ namespace Database\Seeders;
 
 use App\Models\Department;
 use App\Models\ExpenseCategory;
+use App\Models\BankAccount;
 use App\Models\SystemSetting;
+use App\Models\TransactionCategory;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -31,6 +33,9 @@ class DatabaseSeeder extends Seeder
             'users.manage',
             'audit.view',
             'ai_logs.view',
+            'ccc.view',
+            'ccc.manage',
+            'ccc.settings',
         ];
 
         foreach ($permissions as $permission) {
@@ -39,6 +44,7 @@ class DatabaseSeeder extends Seeder
 
         $director = Role::firstOrCreate(['name' => 'director_super_admin', 'guard_name' => 'web']);
         $finance = Role::firstOrCreate(['name' => 'admin_finance', 'guard_name' => 'web']);
+        $managementViewer = Role::firstOrCreate(['name' => 'management_viewer', 'guard_name' => 'web']);
         $executive = Role::firstOrCreate(['name' => 'executive', 'guard_name' => 'web']);
         $staff = Role::firstOrCreate(['name' => 'staff', 'guard_name' => 'web']);
 
@@ -51,6 +57,11 @@ class DatabaseSeeder extends Seeder
             'expense.mark_paid',
             'expense.export',
             'ai_logs.view',
+            'ccc.view',
+            'ccc.manage',
+        ]);
+        $managementViewer->syncPermissions([
+            'ccc.view',
         ]);
         $staff->syncPermissions([
             'expense.view_own',
@@ -133,6 +144,46 @@ class DatabaseSeeder extends Seeder
             'value' => [
                 'mileage_rate' => (float) config('expenseflow.mileage.default_rate', 0.50),
             ],
+        ]);
+
+        SystemSetting::updateOrCreate(['key' => 'ccc_financial'], [
+            'value' => [
+                'minimum_cash_reserve' => 1500,
+                'weekly_debt_budget' => 5000,
+                'monthly_debt_target' => 20000,
+                'overdue_threshold' => 30,
+                'critical_creditor_threshold' => 10000,
+            ],
+        ]);
+
+        SystemSetting::updateOrCreate(['key' => 'ccc_smtp'], [
+            'value' => [
+                'smtp_host' => null,
+                'smtp_port' => 587,
+                'smtp_username' => null,
+                'smtp_password' => null,
+                'smtp_encryption' => 'tls',
+                'sender_name' => 'PMMY Group',
+                'sender_email' => 'hq@physiomobile.com',
+            ],
+        ]);
+
+        foreach ([
+            'inflow' => ['Patient Collection', 'Package Sales', 'Panel Collection', 'Corporate Collection', 'Insurance Collection', 'Refund Received', 'Director Injection', 'Other Income'],
+            'outflow' => ['Salary', 'EPF', 'SOCSO', 'Rent', 'Utilities', 'Internet', 'Marketing', 'Software Subscription', 'Supplier Payment', 'Creditor Payment', 'Director Withdrawal', 'Other Expense'],
+        ] as $type => $categories) {
+            foreach ($categories as $category) {
+                TransactionCategory::updateOrCreate(['name' => $category, 'type' => $type], ['status' => 'active']);
+            }
+        }
+
+        BankAccount::firstOrCreate([
+            'bank_name' => 'Maybank',
+            'account_name' => 'PMMY Group Operating Account',
+        ], [
+            'account_number' => null,
+            'opening_balance' => 0,
+            'status' => 'active',
         ]);
     }
 }

@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\DepartmentController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CccController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExpenseRecordController;
 use App\Http\Controllers\ExpenseWorkflowController;
@@ -60,6 +61,31 @@ Route::middleware(['auth', 'password.changed'])->group(function (): void {
 
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
     Route::get('/reports/export', [ReportController::class, 'export'])->name('reports.export');
+
+    Route::prefix('ccc')->name('ccc.')->group(function (): void {
+        Route::get('/', [CccController::class, 'dashboard'])->name('dashboard');
+        Route::get('/cashflow', [CccController::class, 'cashflow'])->name('cashflow');
+        Route::post('/cashflow', [CccController::class, 'storeCashflow'])->name('cashflow.store');
+        Route::get('/transactions', [CccController::class, 'transactions'])->name('transactions');
+        Route::post('/transactions', [CccController::class, 'storeTransaction'])->name('transactions.store');
+        Route::get('/creditors', [CccController::class, 'creditors'])->name('creditors');
+        Route::post('/creditors', [CccController::class, 'storeCreditor'])->name('creditors.store');
+        Route::put('/creditors/{creditor}', [CccController::class, 'updateCreditor'])->name('creditors.update');
+        Route::get('/debts', [CccController::class, 'debts'])->name('debts');
+        Route::post('/debts', [CccController::class, 'storeDebt'])->name('debts.store');
+        Route::get('/payment-plans', [CccController::class, 'paymentPlans'])->name('payment-plans');
+        Route::post('/payment-plans', [CccController::class, 'storePaymentPlan'])->name('payment-plans.store');
+        Route::post('/payment-plans/{paymentPlan}/paid', [CccController::class, 'markPaymentPlanPaid'])->name('payment-plans.paid');
+        Route::get('/soa', [CccController::class, 'soa'])->name('soa');
+        Route::get('/bank-reconciliation', [CccController::class, 'bankReconciliation'])->name('bank-reconciliation');
+        Route::post('/bank-accounts', [CccController::class, 'storeBankAccount'])->name('bank-accounts.store');
+        Route::post('/bank-imports', [CccController::class, 'uploadBankCsv'])->name('bank-imports.store');
+        Route::get('/communication-logs', [CccController::class, 'communicationLogs'])->name('communication-logs');
+        Route::post('/communication-logs', [CccController::class, 'storeCommunicationLog'])->name('communication-logs.store');
+        Route::get('/reports', [CccController::class, 'reports'])->name('reports');
+        Route::get('/settings', [CccController::class, 'settings'])->name('settings');
+        Route::put('/settings', [CccController::class, 'updateSettings'])->name('settings.update');
+    });
 
     Route::prefix('admin')->name('admin.')->group(function (): void {
         Route::get('/users', [UserController::class, 'index'])->name('users.index');

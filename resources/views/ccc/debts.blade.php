@@ -1,0 +1,13 @@
+@extends('layouts.app')
+
+@section('content')
+<div class="mb-5"><p class="text-sm font-semibold text-[#D71920]">Invoices and payables</p><h1 class="text-2xl font-bold text-gray-950">Debt Records</h1></div>
+@if (auth()->user()->canManageCcc())
+<form method="POST" action="{{ route('ccc.debts.store') }}" class="pm-card mb-5 grid gap-3 p-4 md:grid-cols-4">@csrf
+    <div><label class="pm-label">Creditor</label><select class="pm-input" name="creditor_id" required>@foreach($creditors as $creditor)<option value="{{ $creditor->id }}">{{ $creditor->creditor_name }}</option>@endforeach</select></div><div><label class="pm-label">Invoice No.</label><input class="pm-input" name="invoice_number"></div><div><label class="pm-label">Invoice Date</label><input class="pm-input" type="date" name="invoice_date"></div><div><label class="pm-label">Due Date</label><input class="pm-input" type="date" name="due_date"></div>
+    <div><label class="pm-label">Original Amount</label><input class="pm-input" type="number" step="0.01" name="original_amount" required></div><div><label class="pm-label">Paid Amount</label><input class="pm-input" type="number" step="0.01" name="paid_amount" value="0"></div><div><label class="pm-label">Status</label><select class="pm-input" name="status"><option value="unpaid">Unpaid</option><option value="partially_paid">Partially Paid</option><option value="paid">Paid</option><option value="disputed">Disputed</option></select></div><div class="flex items-end"><button class="pm-btn-primary w-full">Add Debt</button></div>
+    <div class="md:col-span-4"><label class="pm-label">Notes</label><textarea class="pm-input" name="notes" rows="2"></textarea></div>
+</form>
+@endif
+<section class="pm-card overflow-hidden"><table class="w-full text-left text-sm"><thead class="bg-gray-50 text-xs uppercase text-gray-500"><tr><th class="px-4 py-3">Creditor</th><th>Invoice</th><th>Due</th><th>Status</th><th>Paid</th><th class="text-right">Outstanding</th></tr></thead><tbody class="divide-y divide-gray-100">@forelse($items as $item)<tr><td class="px-4 py-3 font-semibold">{{ $item->creditor->creditor_name }}</td><td>{{ $item->invoice_number ?: '#'.$item->id }}<div class="text-xs text-gray-500">RM {{ number_format((float) $item->original_amount, 2) }}</div></td><td>{{ $item->due_date?->format('d M Y') }}</td><td>{{ str($item->status)->headline() }}</td><td>RM {{ number_format((float) $item->paid_amount, 2) }}</td><td class="px-4 py-3 text-right font-bold">RM {{ number_format((float) $item->outstanding_amount, 2) }}</td></tr>@empty<tr><td colspan="6" class="px-4 py-6 text-center text-gray-500">No debt records yet.</td></tr>@endforelse</tbody></table><div class="p-4">{{ $items->links() }}</div></section>
+@endsection

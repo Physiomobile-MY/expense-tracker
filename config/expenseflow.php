@@ -10,6 +10,7 @@ return [
     'roles' => [
         'director_super_admin' => 'Director Super Admin',
         'admin_finance' => 'Admin / Finance',
+        'management_viewer' => 'Management Viewer',
         'executive' => 'Executive',
         'staff' => 'Staff',
     ],

@@ -61,6 +61,21 @@ class User extends Authenticatable
         return $this->role === 'admin_finance' || $this->hasRole('admin_finance');
     }
 
+    public function isManagementViewer(): bool
+    {
+        return $this->role === 'management_viewer' || $this->hasRole('management_viewer');
+    }
+
+    public function canViewCcc(): bool
+    {
+        return $this->isDirector() || $this->isFinance() || $this->isManagementViewer();
+    }
+
+    public function canManageCcc(): bool
+    {
+        return $this->isDirector() || $this->isFinance();
+    }
+
     public function isStaffLevel(): bool
     {
         return in_array($this->role, ['staff', 'executive'], true)
