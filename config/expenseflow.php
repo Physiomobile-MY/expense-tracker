@@ -16,7 +16,7 @@ return [
     ],
 
     'notifications' => [
-        'finance_approval_email' => env('FINANCE_APPROVAL_EMAIL', 'finance.hq@physiomobile.com'),
+        'finance_approval_email' => env('FINANCE_APPROVAL_EMAIL', 'admin.hq@physiomobile.com'),
     ],
 
     'mileage' => [
