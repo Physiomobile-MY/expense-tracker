@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ config('expenseflow.brand.name') }} Login</title>
+    <title>{{ config('expenseflow.brand.name') }} — Forgot Password</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="min-h-screen bg-[#FAFAFA]">
@@ -15,9 +15,15 @@
             </div>
             <div>
                 <h1 class="text-xl font-bold text-gray-950">{{ config('expenseflow.brand.name') }}</h1>
-                <p class="text-sm text-gray-500">{{ config('expenseflow.brand.tagline') }}</p>
+                <p class="text-sm text-gray-500">Reset your password</p>
             </div>
         </div>
+
+        @if (session('status'))
+            <div class="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-800">
+                {{ session('status') }}
+            </div>
+        @endif
 
         @if ($errors->any())
             <div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
@@ -25,26 +31,20 @@
             </div>
         @endif
 
-        <form method="POST" action="{{ route('login.store') }}" class="space-y-4">
+        <p class="mb-5 text-sm text-gray-600">Enter your email address and we'll send you a link to reset your password.</p>
+
+        <form method="POST" action="{{ route('password.email') }}" class="space-y-4">
             @csrf
             <div>
-                <label class="pm-label" for="email">Email</label>
+                <label class="pm-label" for="email">Email address</label>
                 <input class="pm-input" id="email" name="email" type="email" value="{{ old('email') }}" required autofocus>
             </div>
-            <div>
-                <label class="pm-label" for="password">Password</label>
-                <input class="pm-input" id="password" name="password" type="password" required>
-            </div>
-            <div class="flex items-center justify-between">
-                <label class="flex items-center gap-2 text-sm text-gray-600">
-                    <input type="checkbox" name="remember" value="1" class="rounded border-gray-300 text-[#D71920] focus:ring-[#D71920]">
-                    Remember me
-                </label>
-                <a href="{{ route('password.request') }}" class="text-sm font-semibold text-[#D71920] hover:underline">Forgot password?</a>
-            </div>
-            <button class="pm-btn-primary w-full" type="submit">Login</button>
+            <button class="pm-btn-primary w-full" type="submit">Send Reset Link</button>
         </form>
 
+        <p class="mt-5 text-center text-sm text-gray-500">
+            <a href="{{ route('login') }}" class="font-semibold text-[#D71920] hover:underline">Back to login</a>
+        </p>
     </section>
 </main>
 </body>
