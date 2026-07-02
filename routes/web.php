@@ -44,6 +44,9 @@ Route::middleware(['auth', 'password.changed'])->group(function (): void {
     Route::put('/records/{record}', [ExpenseRecordController::class, 'update'])->name('records.update');
     Route::post('/records/{record}/submit', [ExpenseRecordController::class, 'submit'])->name('records.submit');
     Route::post('/records/{record}/comments', [ExpenseRecordController::class, 'comment'])->name('records.comments.store');
+    Route::post('/records/{record}/receipts', [ExpenseRecordController::class, 'addReceipt'])->name('records.receipts.store');
+    Route::patch('/records/{record}/receipts/{receipt}', [ExpenseRecordController::class, 'updateReceipt'])->name('records.receipts.update');
+    Route::delete('/records/{record}/receipts/{receipt}', [ExpenseRecordController::class, 'removeReceipt'])->name('records.receipts.destroy');
 
     Route::post('/records/{record}/approve', [ExpenseWorkflowController::class, 'approve'])->name('records.approve');
     Route::post('/records/{record}/reject', [ExpenseWorkflowController::class, 'reject'])->name('records.reject');

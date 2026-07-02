@@ -136,6 +136,29 @@ class ExpenseRecordService
         }
     }
 
+    public function attachReceipt(ExpenseRecord $record, User $user, UploadedFile $file, string $documentType): ExpenseReceipt
+    {
+        $directory = $documentType !== ExpenseReceipt::DOCUMENT_TYPE_RECEIPT ? 'route-screenshots' : 'receipts';
+        $path = Storage::putFile($directory.'/'.now()->format('Y/m'), $file);
+
+        $receipt = ExpenseReceipt::create([
+            'expense_record_id' => $record->id,
+            'original_filename' => $file->getClientOriginalName(),
+            'file_path' => $path,
+            'file_type' => $file->getMimeType() ?: $file->getClientMimeType(),
+            'file_size' => $file->getSize(),
+            'uploaded_by' => $user->id,
+            'document_type' => $documentType,
+        ]);
+
+        $this->audit($user, 'receipt_attached', 'expense_records', $record->id, null, [
+            'filename' => $file->getClientOriginalName(),
+            'document_type' => $documentType,
+        ]);
+
+        return $receipt;
+    }
+
     public function updateDraft(ExpenseRecord $record, User $actor, array $data): ExpenseRecord
     {
         $this->ensureEditable($record, $actor);
@@ -390,6 +413,15 @@ class ExpenseRecordService
             'toll_amount',
             'toll_entries',
             'parking_amount',
+            'hotel_check_in_date',
+            'hotel_check_out_date',
+            'hotel_check_in_time',
+            'hotel_check_out_time',
+            'hotel_room_number',
+            'hotel_room_type',
+            'hotel_num_nights',
+            'hotel_num_adults',
+            'hotel_num_children',
         ]);
     }
 

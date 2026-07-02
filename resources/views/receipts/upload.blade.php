@@ -18,13 +18,24 @@
                     <option value="google_maps_screenshot" @selected(old('document_type') === 'google_maps_screenshot')>Google Maps screenshot</option>
                 </select>
             </div>
+
             <div>
-                <label class="pm-label" for="receipt">File</label>
-                <input class="pm-input file:mr-3 file:rounded-md file:border-0 file:bg-[#FDECEC] file:px-3 file:py-2 file:text-sm file:font-semibold file:text-[#A80F16]" id="receipt" name="receipt" type="file" accept=".jpg,.jpeg,.png,.heic,.heif,.pdf,image/jpeg,image/png,image/heic,image/heif,application/pdf" required>
-                <p class="mt-2 text-xs text-gray-500">JPG, PNG, HEIC, HEIF, or PDF. Maximum 10MB.</p>
+                <label class="pm-label" for="receipts">Files</label>
+                <input
+                    class="pm-input file:mr-3 file:rounded-md file:border-0 file:bg-[#FDECEC] file:px-3 file:py-2 file:text-sm file:font-semibold file:text-[#A80F16]"
+                    id="receipts"
+                    name="receipts[]"
+                    type="file"
+                    accept=".jpg,.jpeg,.png,.heic,.heif,.pdf,image/jpeg,image/png,image/heic,image/heif,application/pdf"
+                    multiple
+                    required
+                    data-file-input
+                >
+                <p class="mt-2 text-xs text-gray-500">JPG, PNG, HEIC, HEIF, or PDF. Max 10 MB each. Select multiple files to upload in one go.</p>
+                <div class="mt-2 hidden space-y-1 text-sm text-gray-700" id="file-list"></div>
             </div>
 
-            <div class="rounded-lg bg-[#FDECEC] p-4 text-sm text-[#A80F16]">
+            <div class="rounded-lg bg-[#FDECEC] p-4 text-sm text-[#A80F16]" data-upload-hint>
                 <p class="font-semibold">Reading your upload...</p>
                 <p class="mt-1">Extracting receipt details or route distance, toll, and map data. Please review the result before submitting.</p>
             </div>
@@ -33,12 +44,12 @@
                 <div class="flex items-center gap-3">
                     <span class="h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-[#F3BEC7] border-t-[#D71920]"></span>
                     <div>
-                        <p class="font-semibold text-gray-950">Scanning upload...</p>
-                        <p class="mt-1">Uploading file and reading amount, distance, toll, and route details.</p>
+                        <p class="font-semibold text-gray-950">Scanning uploads...</p>
+                        <p class="mt-1">Uploading files and reading amount, distance, toll, and route details.</p>
                     </div>
                 </div>
                 <div class="mt-4 h-2 overflow-hidden rounded-full bg-[#FDECEC]">
-                    <div class="h-full w-1/2 animate-pulse rounded-full bg-[#D71920]"></div>
+                    <div class="h-full animate-pulse rounded-full bg-[#D71920]" data-progress-bar style="width: 30%"></div>
                 </div>
             </div>
 
@@ -52,4 +63,43 @@
         </form>
     </section>
 </div>
+
+<script>
+(function () {
+    const input = document.querySelector('[data-file-input]');
+    const fileList = document.getElementById('file-list');
+    const hint = document.querySelector('[data-upload-hint]');
+    const loading = document.querySelector('[data-upload-loading]');
+    const btn = document.querySelector('[data-upload-button]');
+    const btnText = document.querySelector('[data-upload-button-text]');
+    const btnLoading = document.querySelector('[data-upload-button-loading]');
+    const form = document.querySelector('[data-upload-form]');
+
+    input.addEventListener('change', function () {
+        const files = Array.from(this.files);
+        fileList.innerHTML = '';
+        if (!files.length) { fileList.classList.add('hidden'); return; }
+
+        fileList.classList.remove('hidden');
+        files.forEach(f => {
+            const div = document.createElement('div');
+            div.className = 'flex items-center gap-2 rounded-md bg-gray-50 px-3 py-2';
+            div.innerHTML = `<span class="text-gray-400">📄</span><span class="flex-1 truncate">${f.name}</span><span class="shrink-0 text-gray-400">${(f.size / 1024 / 1024).toFixed(1)} MB</span>`;
+            fileList.appendChild(div);
+        });
+
+        const count = files.length;
+        btnText.textContent = count > 1 ? `Upload ${count} files` : 'Upload';
+    });
+
+    form.addEventListener('submit', function () {
+        hint.classList.add('hidden');
+        loading.classList.remove('hidden');
+        btn.disabled = true;
+        btnText.classList.add('hidden');
+        btnLoading.classList.remove('hidden');
+        btnLoading.classList.add('flex');
+    });
+})();
+</script>
 @endsection

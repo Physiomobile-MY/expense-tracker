@@ -25,30 +25,56 @@
 </div>
 
 <div class="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+    @php
+        $isRouteScreenshot = $record->receipts->first()?->isRouteScreenshot();
+    @endphp
     <section class="pm-card overflow-hidden">
-        <div class="border-b border-gray-100 px-4 py-3">
-            <h2 class="font-bold text-gray-950">{{ $headerReceipt?->isRouteScreenshot() ? 'Route' : 'Receipt' }}</h2>
+        <div class="border-b border-gray-100 px-4 py-3 flex items-center gap-2">
+            <h2 class="font-bold text-gray-950">{{ $isRouteScreenshot ? 'Route Files' : 'Receipts' }}</h2>
+            <span class="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-600">{{ $record->receipts->count() }}</span>
         </div>
-        <div class="p-4">
-            @php
-                $receipt = $record->receipts->first();
-                $isRouteScreenshot = $receipt?->isRouteScreenshot();
-            @endphp
-            @if ($receipt?->isPreviewableImage())
-                <p class="mb-2 text-xs font-semibold uppercase text-gray-500">{{ $receipt->documentTypeLabel() }}</p>
-                <img src="{{ route('receipts.file', $receipt) }}" alt="Receipt preview" class="max-h-[34rem] w-full rounded-lg border border-gray-200 object-contain">
-            @elseif ($receipt)
-                <div class="rounded-lg border border-gray-200 bg-gray-50 p-5 text-center">
-                    <p class="font-semibold text-gray-900">{{ $receipt->original_filename }}</p>
-                    @if ($receipt->isHeic())
-                        <p class="mt-2 text-sm text-gray-500">HEIC preview may not be supported by this browser.</p>
-                    @endif
-                    <a href="{{ route('receipts.file', $receipt) }}" class="mt-3 inline-flex text-sm font-semibold text-[#D71920]" target="_blank">Open File</a>
+
+        {{-- Primary preview --}}
+        @php $primary = $record->receipts->first(); @endphp
+        @if ($primary?->isPreviewableImage())
+            <div class="p-4 pb-2">
+                <p class="mb-2 text-xs font-semibold uppercase text-gray-500">{{ $primary->documentTypeLabel() }}</p>
+                <img src="{{ route('receipts.file', $primary) }}" alt="Receipt preview" class="max-h-[28rem] w-full rounded-lg border border-gray-200 object-contain cursor-pointer" id="primary-preview">
+            </div>
+        @elseif ($primary)
+            <div class="m-4 rounded-lg border border-gray-200 bg-gray-50 p-4 text-center">
+                <p class="font-semibold text-gray-900 text-sm">{{ $primary->original_filename }}</p>
+                @if ($primary->isHeic())
+                    <p class="mt-1 text-xs text-gray-500">HEIC preview not supported in this browser.</p>
+                @endif
+                <a href="{{ route('receipts.file', $primary) }}" class="mt-2 inline-flex text-sm font-semibold text-[#D71920]" target="_blank">Open File</a>
+            </div>
+        @else
+            <div class="px-4 py-8 text-center text-sm text-gray-500">No receipt files.</div>
+        @endif
+
+        {{-- All receipts strip --}}
+        @if ($record->receipts->count() > 1)
+            <div class="border-t border-gray-100 p-4">
+                <p class="mb-3 text-xs font-semibold uppercase text-gray-500">All Attachments</p>
+                <div class="grid grid-cols-3 gap-2">
+                    @foreach ($record->receipts as $receipt)
+                        <a href="{{ route('receipts.file', $receipt) }}" target="_blank" class="group relative block overflow-hidden rounded-lg border border-gray-200 bg-gray-50" title="{{ $receipt->original_filename }}">
+                            @if ($receipt->isPreviewableImage())
+                                <img src="{{ route('receipts.file', $receipt) }}" alt="" class="aspect-square w-full object-cover transition group-hover:opacity-80">
+                            @else
+                                <div class="flex aspect-square w-full items-center justify-center text-sm font-bold text-gray-400 uppercase">
+                                    {{ $receipt->isPdf() ? 'PDF' : pathinfo($receipt->original_filename, PATHINFO_EXTENSION) }}
+                                </div>
+                            @endif
+                            <div class="absolute bottom-0 left-0 right-0 bg-black/50 px-1.5 py-1">
+                                <p class="truncate text-[10px] font-semibold text-white">{{ $receipt->documentTypeLabel() }}</p>
+                            </div>
+                        </a>
+                    @endforeach
                 </div>
-            @else
-                <div class="rounded-lg border border-gray-200 bg-gray-50 p-5 text-center text-sm text-gray-500">No receipt file.</div>
-            @endif
-        </div>
+            </div>
+        @endif
     </section>
 
     <section class="pm-card overflow-hidden {{ $isRouteScreenshot ? 'lg:col-span-2' : '' }}">

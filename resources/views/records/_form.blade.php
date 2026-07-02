@@ -11,6 +11,7 @@
     $itemCount = max(count($items), 5);
     $tollEntries = old('toll_entries', $record->toll_entries ?: ($record->toll_amount ? [['label' => 'Toll', 'amount' => $record->toll_amount]] : [[]]));
     $tollEntryCount = max(count($tollEntries), 1);
+    $canEdit = $record->canBeEditedBy(auth()->user());
 @endphp
 
 <form method="POST" action="{{ route('records.update', $record) }}" class="space-y-5">
@@ -18,37 +19,115 @@
     @method('PUT')
 
     <div class="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+        {{-- Left panel: All attached receipts --}}
         <section class="pm-card overflow-hidden">
-            <div class="border-b border-gray-100 px-4 py-3">
-                <h2 class="font-bold text-gray-950">{{ $isRouteScreenshot ? 'Route Preview' : 'Receipt Preview' }}</h2>
+            <div class="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+                <h2 class="font-bold text-gray-950">Receipts <span class="ml-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-600">{{ $record->receipts->count() }}</span></h2>
             </div>
-            <div class="p-4">
-                @if ($primaryReceipt?->isPreviewableImage())
-                    <p class="mb-2 text-xs font-semibold uppercase text-gray-500">{{ $primaryReceipt->documentTypeLabel() }}</p>
-                    <img src="{{ route('receipts.file', $primaryReceipt) }}" alt="Receipt preview" class="max-h-[34rem] w-full rounded-lg border border-gray-200 object-contain">
-                @elseif ($primaryReceipt)
-                    <div class="rounded-lg border border-gray-200 bg-gray-50 p-5 text-center">
-                        <p class="font-semibold text-gray-900">{{ $primaryReceipt->original_filename }}</p>
-                        @if ($primaryReceipt->isHeic())
-                            <p class="mt-2 text-sm text-gray-500">HEIC preview may not be supported by this browser. You can still save or submit this receipt.</p>
+
+            {{-- AI alerts --}}
+            @if ($record->ai_confidence_score !== null && $record->ai_confidence_score < 0.75)
+                <div class="mx-4 mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                    Some details may be inaccurate (AI {{ number_format((float) $record->ai_confidence_score * 100) }}% confidence). Please double-check before submitting.
+                </div>
+            @endif
+            @if ($record->aiLogs->last()?->status === 'failed')
+                <div class="mx-4 mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+                    Auto-read failed. Enter details manually.
+                </div>
+            @endif
+
+            {{-- Receipt cards --}}
+            <div class="divide-y divide-gray-100" id="receipts-list">
+                @forelse ($record->receipts as $receipt)
+                    <div class="flex gap-3 p-4" data-receipt-id="{{ $receipt->id }}">
+                        {{-- Thumbnail / icon --}}
+                        <div class="h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
+                            @if ($receipt->isPreviewableImage())
+                                <img src="{{ route('receipts.file', $receipt) }}" alt="preview" class="h-full w-full object-cover cursor-pointer" data-preview-src="{{ route('receipts.file', $receipt) }}" data-preview-name="{{ $receipt->original_filename }}">
+                            @elseif ($receipt->isPdf())
+                                <div class="flex h-full w-full items-center justify-center text-2xl text-gray-400">PDF</div>
+                            @else
+                                <div class="flex h-full w-full items-center justify-center text-xs font-semibold text-gray-400 uppercase">{{ pathinfo($receipt->original_filename, PATHINFO_EXTENSION) }}</div>
+                            @endif
+                        </div>
+
+                        {{-- Info + controls --}}
+                        <div class="min-w-0 flex-1">
+                            <p class="truncate text-sm font-semibold text-gray-900">{{ $receipt->original_filename }}</p>
+                            <p class="mt-0.5 text-xs text-gray-400">{{ number_format($receipt->file_size / 1024, 0) }} KB · {{ $receipt->created_at->format('d M Y H:i') }}</p>
+
+                            {{-- Document type selector (inline PATCH) --}}
+                            @if ($canEdit)
+                                <form method="POST" action="{{ route('records.receipts.update', [$record, $receipt]) }}" class="mt-2">
+                                    @csrf
+                                    @method('PATCH')
+                                    <div class="flex items-center gap-2">
+                                        <select class="pm-input py-1 text-xs" name="document_type" onchange="this.form.submit()">
+                                            <option value="receipt" @selected($receipt->document_type === 'receipt')>Receipt</option>
+                                            <option value="waze_screenshot" @selected($receipt->document_type === 'waze_screenshot')>Waze Screenshot</option>
+                                            <option value="google_maps_screenshot" @selected($receipt->document_type === 'google_maps_screenshot')>Google Maps</option>
+                                        </select>
+                                        <a href="{{ route('receipts.file', $receipt) }}" target="_blank" class="shrink-0 text-xs font-semibold text-[#D71920]">Open</a>
+                                    </div>
+                                </form>
+                            @else
+                                <p class="mt-1 text-xs text-gray-500">{{ $receipt->documentTypeLabel() }}</p>
+                                <a href="{{ route('receipts.file', $receipt) }}" target="_blank" class="mt-1 inline-block text-xs font-semibold text-[#D71920]">Open</a>
+                            @endif
+                        </div>
+
+                        {{-- Delete --}}
+                        @if ($canEdit && $record->receipts->count() > 1)
+                            <form method="POST" action="{{ route('records.receipts.destroy', [$record, $receipt]) }}" onsubmit="return confirm('Remove this receipt?')">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="mt-1 text-xs font-semibold text-gray-400 hover:text-red-600" title="Remove">✕</button>
+                            </form>
                         @endif
-                        <a href="{{ route('receipts.file', $primaryReceipt) }}" class="mt-3 inline-flex text-sm font-semibold text-[#D71920]" target="_blank">Open File</a>
                     </div>
-                @else
-                    <div class="rounded-lg border border-gray-200 bg-gray-50 p-5 text-center text-sm text-gray-500">No receipt file.</div>
-                @endif
+                @empty
+                    <div class="px-4 py-8 text-center text-sm text-gray-500">No receipt files attached.</div>
+                @endforelse
+            </div>
 
-                @if ($record->ai_confidence_score !== null && $record->ai_confidence_score < 0.75)
-                    <div class="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                        Some receipt details may be inaccurate. Please double-check before submitting.
+            {{-- Attach another receipt --}}
+            @if ($canEdit)
+                <div class="border-t border-gray-100">
+                    <button type="button" class="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-semibold text-[#D71920] hover:bg-gray-50" data-toggle-attach>
+                        <span>+ Attach another receipt</span>
+                    </button>
+                    <div class="hidden px-4 pb-4" id="attach-form">
+                        <form method="POST" action="{{ route('records.receipts.store', $record) }}" enctype="multipart/form-data" class="space-y-3" data-attach-form>
+                            @csrf
+                            <div>
+                                <label class="pm-label" for="attach_document_type">Type</label>
+                                <select class="pm-input" id="attach_document_type" name="document_type">
+                                    <option value="receipt">Receipt</option>
+                                    <option value="waze_screenshot">Waze Screenshot</option>
+                                    <option value="google_maps_screenshot">Google Maps Screenshot</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="pm-label" for="attach_receipt">File</label>
+                                <input class="pm-input file:mr-2 file:rounded file:border-0 file:bg-[#FDECEC] file:px-2 file:py-1 file:text-xs file:font-semibold file:text-[#A80F16]" id="attach_receipt" name="receipt" type="file" accept=".jpg,.jpeg,.png,.heic,.heif,.pdf,image/jpeg,image/png,image/heic,image/heif,application/pdf" required>
+                                <p class="mt-1 text-xs text-gray-400">Max 10 MB. AI will re-scan and update categorization.</p>
+                            </div>
+                            <button class="pm-btn-primary w-full py-2 text-sm" type="submit" data-attach-submit>
+                                <span data-attach-text>Attach & Scan</span>
+                                <span class="hidden items-center gap-2" data-attach-loading>
+                                    <span class="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white"></span>
+                                    Scanning...
+                                </span>
+                            </button>
+                        </form>
                     </div>
-                @endif
+                </div>
+            @endif
 
-                @if ($record->aiLogs->last()?->status === 'failed')
-                    <div class="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-                        We could not read this upload automatically. You can still enter the details manually.
-                    </div>
-                @endif
+            {{-- Lightbox preview (hidden) --}}
+            <div class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70" id="receipt-lightbox" onclick="this.classList.add('hidden'); this.classList.remove('flex')">
+                <img src="" alt="" id="lightbox-img" class="max-h-[90vh] max-w-[90vw] rounded-lg shadow-xl">
             </div>
         </section>
 
@@ -310,6 +389,7 @@
 
 <script>
 (function () {
+    // Hotel section show/hide + nights auto-calc
     const typeSelect = document.getElementById('claim_expense_type');
     const hotelSection = document.getElementById('hotel-details-section');
     const checkinInput = document.querySelector('[data-hotel-checkin]');
@@ -329,7 +409,38 @@
     typeSelect.addEventListener('change', toggleHotelSection);
     checkinInput.addEventListener('change', calcNights);
     checkoutInput.addEventListener('change', calcNights);
-
     toggleHotelSection();
+
+    // Attach another receipt toggle
+    const toggleBtn = document.querySelector('[data-toggle-attach]');
+    const attachForm = document.getElementById('attach-form');
+    if (toggleBtn && attachForm) {
+        toggleBtn.addEventListener('click', () => {
+            attachForm.classList.toggle('hidden');
+        });
+        const attachFormEl = document.querySelector('[data-attach-form]');
+        if (attachFormEl) {
+            attachFormEl.addEventListener('submit', function () {
+                const btn = this.querySelector('[data-attach-submit]');
+                const text = this.querySelector('[data-attach-text]');
+                const loading = this.querySelector('[data-attach-loading]');
+                if (btn) btn.disabled = true;
+                if (text) text.classList.add('hidden');
+                if (loading) { loading.classList.remove('hidden'); loading.classList.add('flex'); }
+            });
+        }
+    }
+
+    // Lightbox for receipt thumbnails
+    const lightbox = document.getElementById('receipt-lightbox');
+    const lightboxImg = document.getElementById('lightbox-img');
+    document.querySelectorAll('[data-preview-src]').forEach(img => {
+        img.addEventListener('click', function () {
+            lightboxImg.src = this.dataset.previewSrc;
+            lightboxImg.alt = this.dataset.previewName || '';
+            lightbox.classList.remove('hidden');
+            lightbox.classList.add('flex');
+        });
+    });
 })();
 </script>

@@ -2,13 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\ProcessReceiptExtractionJob;
 use App\Models\AuditLog;
 use App\Models\Department;
 use App\Models\ExpenseCategory;
+use App\Models\ExpenseReceipt;
 use App\Models\ExpenseRecord;
 use App\Services\ExpenseRecordService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class ExpenseRecordController extends Controller
@@ -119,6 +122,58 @@ class ExpenseRecordController extends Controller
         ]);
 
         return back()->with('status', 'Comment added.');
+    }
+
+    public function addReceipt(Request $request, ExpenseRecord $record, ExpenseRecordService $records): RedirectResponse
+    {
+        $this->authorizeVisible($request, $record);
+
+        if (! $record->canBeEditedBy($request->user())) {
+            return back()->with('error', 'This expense record is locked for editing.');
+        }
+
+        $validated = $request->validate([
+            'receipt' => ['required', 'file', 'mimes:jpg,jpeg,png,heic,heif,pdf', 'max:10240'],
+            'document_type' => ['required', 'in:receipt,waze_screenshot,google_maps_screenshot'],
+        ], [], [
+            'receipt' => 'receipt file',
+            'document_type' => 'document type',
+        ]);
+
+        $documentType = in_array($validated['document_type'], [
+            ExpenseReceipt::DOCUMENT_TYPE_WAZE_SCREENSHOT,
+            ExpenseReceipt::DOCUMENT_TYPE_GOOGLE_MAPS_SCREENSHOT,
+        ], true) ? $validated['document_type'] : ExpenseReceipt::DOCUMENT_TYPE_RECEIPT;
+
+        $records->attachReceipt($record, $request->user(), $validated['receipt'], $documentType);
+        ProcessReceiptExtractionJob::dispatchSync($record->id);
+
+        return back()->with('status', 'Receipt attached and scanned. Categorization updated below.');
+    }
+
+    public function updateReceipt(Request $request, ExpenseRecord $record, ExpenseReceipt $receipt): RedirectResponse
+    {
+        $this->authorizeVisible($request, $record);
+        abort_if($receipt->expense_record_id !== $record->id, 404);
+
+        $validated = $request->validate([
+            'document_type' => ['required', 'in:receipt,waze_screenshot,google_maps_screenshot'],
+        ]);
+
+        $receipt->update($validated);
+
+        return back()->with('status', 'Receipt type updated.');
+    }
+
+    public function removeReceipt(Request $request, ExpenseRecord $record, ExpenseReceipt $receipt): RedirectResponse
+    {
+        $this->authorizeVisible($request, $record);
+        abort_if($receipt->expense_record_id !== $record->id, 404);
+
+        Storage::delete($receipt->file_path);
+        $receipt->delete();
+
+        return back()->with('status', 'Receipt removed.');
     }
 
     private function authorizeVisible(Request $request, ExpenseRecord $record): void
