@@ -109,7 +109,7 @@ Route::middleware(['auth', 'password.changed'])->group(function (): void {
         Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
         Route::put('/settings', [SettingsController::class, 'update'])->name('settings.update');
 
-        Route::post('/impersonate/{user}', [ImpersonationController::class, 'start'])->name('impersonate.start');
         Route::post('/impersonate/stop', [ImpersonationController::class, 'stop'])->name('impersonate.stop');
+        Route::post('/impersonate/{user}', [ImpersonationController::class, 'start'])->name('impersonate.start');
     });
 });
