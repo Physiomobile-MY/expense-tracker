@@ -117,6 +117,24 @@
     </aside>
 
     <main class="px-4 py-5 sm:px-6 md:ml-56 md:px-7">
+        @if (session('impersonating_user_id'))
+            @php $impersonatorId = session('impersonator_id'); $realAdmin = \App\Models\User::find($impersonatorId); @endphp
+            <div class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-orange-300 bg-orange-50 px-4 py-3 text-sm text-orange-900">
+                <div class="flex items-center gap-2">
+                    <span class="font-bold">👁 Impersonating:</span>
+                    <span class="font-semibold">{{ auth()->user()->name }}</span>
+                    <span class="text-orange-600">({{ auth()->user()->roleLabel() }})</span>
+                    @if ($realAdmin)
+                        <span class="text-orange-500">· as {{ $realAdmin->name }}</span>
+                    @endif
+                </div>
+                <form method="POST" action="{{ route('admin.impersonate.stop') }}">
+                    @csrf
+                    <button type="submit" class="rounded-md bg-orange-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-orange-700">Stop Impersonating</button>
+                </form>
+            </div>
+        @endif
+
         @if (session('status'))
             <div class="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-800">{{ session('status') }}</div>
         @endif

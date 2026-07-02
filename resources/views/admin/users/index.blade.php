@@ -62,6 +62,14 @@
                     <button class="pm-btn-secondary" type="submit">Save</button>
                 </div>
             </form>
+            @if (auth()->user()->isDirector() && !$member->isDirector() && $member->id !== auth()->user()->id && !session('impersonating_user_id'))
+                <form method="POST" action="{{ route('admin.impersonate.start', $member) }}" class="flex shrink-0 items-center px-4 pb-4 lg:pb-0 lg:pr-4 lg:pt-0">
+                    @csrf
+                    <button type="submit" class="pm-btn-secondary !py-2 text-xs whitespace-nowrap" onclick="return confirm('Impersonate {{ addslashes($member->name) }}? You will act as this user until you stop.')">
+                        Impersonate
+                    </button>
+                </form>
+            @endif
         @endforeach
     </div>
     <div class="border-t border-gray-100 px-4 py-3">{{ $users->links() }}</div>

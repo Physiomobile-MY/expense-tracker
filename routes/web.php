@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AIExtractionLogController;
+use App\Http\Controllers\Admin\ImpersonationController;
 use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\DepartmentController;
@@ -107,5 +108,8 @@ Route::middleware(['auth', 'password.changed'])->group(function (): void {
         Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
         Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
         Route::put('/settings', [SettingsController::class, 'update'])->name('settings.update');
+
+        Route::post('/impersonate/{user}', [ImpersonationController::class, 'start'])->name('impersonate.start');
+        Route::post('/impersonate/stop', [ImpersonationController::class, 'stop'])->name('impersonate.stop');
     });
 });
