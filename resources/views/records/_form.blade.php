@@ -199,6 +199,7 @@
                     <select class="pm-input" id="claim_expense_type" name="claim_expense_type">
                         @foreach ([
                             'receipt' => 'Receipt',
+                            'medical' => 'Medical Claim',
                             'hotel' => 'Hotel Receipt',
                             'mileage' => 'Mileage',
                             'toll' => 'Toll',
@@ -295,6 +296,45 @@
                         @endif
                     </div>
                 </div>
+                <div class="sm:col-span-2 rounded-lg border border-gray-100 p-3" id="medical-details-section">
+                    <h3 class="font-semibold text-gray-950">Medical Claim Details</h3>
+                    <div class="mt-3 grid gap-4 sm:grid-cols-2">
+                        <div>
+                            <label class="pm-label" for="medical_patient_name">Patient Name</label>
+                            <input class="pm-input" id="medical_patient_name" name="medical_patient_name" value="{{ old('medical_patient_name', $record->medical_patient_name) }}" placeholder="Full name of patient">
+                        </div>
+                        <div>
+                            <label class="pm-label" for="medical_relationship">Relationship to Claimant</label>
+                            <select class="pm-input" id="medical_relationship" name="medical_relationship">
+                                <option value="">Select relationship</option>
+                                @foreach (['self' => 'Self', 'spouse' => 'Spouse', 'child' => 'Child', 'parent' => 'Parent', 'sibling' => 'Sibling', 'other' => 'Other'] as $val => $lbl)
+                                    <option value="{{ $val }}" @selected(old('medical_relationship', $record->medical_relationship) === $val)>{{ $lbl }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <label class="pm-label" for="medical_doctor_name">Doctor Name</label>
+                            <input class="pm-input" id="medical_doctor_name" name="medical_doctor_name" value="{{ old('medical_doctor_name', $record->medical_doctor_name) }}" placeholder="Attending doctor">
+                        </div>
+                        <div>
+                            <label class="pm-label" for="medical_diagnosis">Diagnosis / Reason for Visit</label>
+                            <input class="pm-input" id="medical_diagnosis" name="medical_diagnosis" value="{{ old('medical_diagnosis', $record->medical_diagnosis) }}" placeholder="e.g. Fever, Flu, Checkup">
+                        </div>
+                        <div>
+                            <label class="pm-label" for="medical_consultation_fee">Consultation Fee (MYR)</label>
+                            <input class="pm-input" id="medical_consultation_fee" name="medical_consultation_fee" type="number" step="0.01" min="0" value="{{ old('medical_consultation_fee', $record->medical_consultation_fee) }}" data-med-consultation>
+                        </div>
+                        <div>
+                            <label class="pm-label" for="medical_medication_fee">Medication Fee (MYR)</label>
+                            <input class="pm-input" id="medical_medication_fee" name="medical_medication_fee" type="number" step="0.01" min="0" value="{{ old('medical_medication_fee', $record->medical_medication_fee) }}" data-med-medication>
+                        </div>
+                        <div class="sm:col-span-2 flex items-center gap-3">
+                            <input class="h-4 w-4 rounded border-gray-300 text-[#D71920]" id="medical_panel_clinic" name="medical_panel_clinic" type="checkbox" value="1" @checked(old('medical_panel_clinic', $record->medical_panel_clinic))>
+                            <label class="pm-label mb-0 cursor-pointer" for="medical_panel_clinic">Panel clinic (company-approved)</label>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="sm:col-span-2 rounded-lg border border-gray-100 p-3" id="hotel-details-section">
                     <h3 class="font-semibold text-gray-950">Hotel Details</h3>
                     <div class="mt-3 grid gap-4 sm:grid-cols-2">
@@ -389,8 +429,30 @@
 
 <script>
 (function () {
-    // Hotel section show/hide + nights auto-calc
     const typeSelect = document.getElementById('claim_expense_type');
+
+    // Medical section show/hide + auto-sum consultation + medication → total
+    const medicalSection = document.getElementById('medical-details-section');
+    const medConsult = document.querySelector('[data-med-consultation]');
+    const medMedication = document.querySelector('[data-med-medication]');
+    const totalInput = document.getElementById('total_amount');
+
+    function toggleMedicalSection() {
+        medicalSection.style.display = typeSelect.value === 'medical' ? '' : 'none';
+    }
+
+    function sumMedicalFees() {
+        const c = parseFloat(medConsult.value) || 0;
+        const m = parseFloat(medMedication.value) || 0;
+        if ((c + m) > 0 && totalInput) totalInput.value = (c + m).toFixed(2);
+    }
+
+    medConsult && medConsult.addEventListener('input', sumMedicalFees);
+    medMedication && medMedication.addEventListener('input', sumMedicalFees);
+    typeSelect.addEventListener('change', toggleMedicalSection);
+    toggleMedicalSection();
+
+    // Hotel section show/hide + nights auto-calc
     const hotelSection = document.getElementById('hotel-details-section');
     const checkinInput = document.querySelector('[data-hotel-checkin]');
     const checkoutInput = document.querySelector('[data-hotel-checkout]');

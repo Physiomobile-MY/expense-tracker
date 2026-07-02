@@ -185,7 +185,7 @@ class ExpenseRecordController extends Controller
     {
         $rules = [
             'record_type' => [$submit ? 'required' : 'nullable', 'in:claimable,non_claimable'],
-            'claim_expense_type' => ['nullable', 'in:receipt,mileage,toll,parking,travel,hotel'],
+            'claim_expense_type' => ['nullable', 'in:receipt,mileage,toll,parking,travel,hotel,medical'],
             'department_id' => ['nullable', 'exists:departments,id'],
             'expense_category_id' => ['nullable', 'exists:expense_categories,id'],
             'merchant_name' => ['nullable', 'string', 'max:255'],
@@ -214,6 +214,13 @@ class ExpenseRecordController extends Controller
             'toll_entries.*.label' => ['nullable', 'string', 'max:255'],
             'toll_entries.*.amount' => ['nullable', 'numeric', 'min:0'],
             'parking_amount' => ['nullable', 'numeric', 'min:0'],
+            'medical_patient_name' => ['nullable', 'string', 'max:255'],
+            'medical_relationship' => ['nullable', 'in:self,spouse,child,parent,sibling,other'],
+            'medical_diagnosis' => ['nullable', 'string', 'max:255'],
+            'medical_doctor_name' => ['nullable', 'string', 'max:255'],
+            'medical_consultation_fee' => ['nullable', 'numeric', 'min:0'],
+            'medical_medication_fee' => ['nullable', 'numeric', 'min:0'],
+            'medical_panel_clinic' => ['nullable', 'boolean'],
             'hotel_check_in_date' => ['nullable', 'date'],
             'hotel_check_out_date' => ['nullable', 'date', 'after_or_equal:hotel_check_in_date'],
             'hotel_check_in_time' => ['nullable', 'string', 'max:10'],

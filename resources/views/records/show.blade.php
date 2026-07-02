@@ -165,6 +165,30 @@
     </section>
 @endif
 
+@if ($record->hasMedicalDetails())
+    <section class="pm-card mt-4 overflow-hidden">
+        <div class="border-b border-gray-100 px-4 py-3">
+            <h2 class="font-bold text-gray-950">Medical Claim Details</h2>
+        </div>
+        <dl class="grid gap-px bg-gray-100 text-sm sm:grid-cols-3">
+            @foreach ([
+                'Patient Name' => $record->medical_patient_name,
+                'Relationship' => $record->medical_relationship ? str($record->medical_relationship)->headline()->toString() : null,
+                'Panel Clinic' => $record->medical_panel_clinic !== null ? ($record->medical_panel_clinic ? 'Yes' : 'No') : null,
+                'Doctor' => $record->medical_doctor_name,
+                'Diagnosis / Reason' => $record->medical_diagnosis,
+                'Consultation Fee' => $record->medical_consultation_fee ? 'MYR '.number_format((float) $record->medical_consultation_fee, 2) : null,
+                'Medication Fee' => $record->medical_medication_fee ? 'MYR '.number_format((float) $record->medical_medication_fee, 2) : null,
+            ] as $label => $value)
+                <div class="bg-white p-4">
+                    <dt class="text-xs font-semibold uppercase text-gray-500">{{ $label }}</dt>
+                    <dd class="mt-1 font-medium text-gray-950">{{ $value ?? '-' }}</dd>
+                </div>
+            @endforeach
+        </dl>
+    </section>
+@endif
+
 @if ($record->hasHotelDetails())
     <section class="pm-card mt-4 overflow-hidden">
         <div class="border-b border-gray-100 px-4 py-3">

@@ -54,6 +54,13 @@ class ExpenseRecord extends Model
         'hotel_num_nights',
         'hotel_num_adults',
         'hotel_num_children',
+        'medical_patient_name',
+        'medical_relationship',
+        'medical_diagnosis',
+        'medical_doctor_name',
+        'medical_consultation_fee',
+        'medical_medication_fee',
+        'medical_panel_clinic',
         'description',
         'remarks',
         'status',
@@ -87,6 +94,9 @@ class ExpenseRecord extends Model
         'hotel_num_nights' => 'integer',
         'hotel_num_adults' => 'integer',
         'hotel_num_children' => 'integer',
+        'medical_consultation_fee' => 'decimal:2',
+        'medical_medication_fee' => 'decimal:2',
+        'medical_panel_clinic' => 'boolean',
         'duplicate_warning' => 'boolean',
         'ai_confidence_score' => 'decimal:4',
         'submitted_at' => 'datetime',
@@ -192,9 +202,17 @@ class ExpenseRecord extends Model
             'parking' => 'Parking',
             'travel' => 'Travel Claim',
             'hotel' => 'Hotel Receipt',
+            'medical' => 'Medical Claim',
             'receipt' => 'Receipt',
             default => $this->category?->name ?: 'Receipt',
         };
+    }
+
+    public function hasMedicalDetails(): bool
+    {
+        return $this->claim_expense_type === 'medical'
+            || filled($this->medical_patient_name)
+            || filled($this->medical_diagnosis);
     }
 
     public function hasHotelDetails(): bool
