@@ -139,6 +139,32 @@
     </section>
 @endif
 
+@if ($record->hasHotelDetails())
+    <section class="pm-card mt-4 overflow-hidden">
+        <div class="border-b border-gray-100 px-4 py-3">
+            <h2 class="font-bold text-gray-950">Hotel Details</h2>
+        </div>
+        <dl class="grid gap-px bg-gray-100 text-sm sm:grid-cols-3">
+            @foreach ([
+                'Check-in Date' => $record->hotel_check_in_date?->format('d M Y'),
+                'Check-out Date' => $record->hotel_check_out_date?->format('d M Y'),
+                'Nights' => $record->hotel_num_nights,
+                'Check-in Time' => $record->hotel_check_in_time,
+                'Check-out Time' => $record->hotel_check_out_time,
+                'Room Number' => $record->hotel_room_number,
+                'Room Type' => $record->hotel_room_type,
+                'Adults' => $record->hotel_num_adults,
+                'Children' => $record->hotel_num_children,
+            ] as $label => $value)
+                <div class="bg-white p-4">
+                    <dt class="text-xs font-semibold uppercase text-gray-500">{{ $label }}</dt>
+                    <dd class="mt-1 font-medium text-gray-950">{{ $value ?? '-' }}</dd>
+                </div>
+            @endforeach
+        </dl>
+    </section>
+@endif
+
 @php
     $canReviewClaim = $record->record_type === 'claimable' && in_array($record->status, ['submitted', 'pending_review', 'need_clarification'], true);
     $canPayClaim = $record->record_type === 'claimable' && $record->status === 'approved';

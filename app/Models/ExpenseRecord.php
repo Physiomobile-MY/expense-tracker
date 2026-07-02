@@ -45,6 +45,15 @@ class ExpenseRecord extends Model
         'toll_amount',
         'toll_entries',
         'parking_amount',
+        'hotel_check_in_date',
+        'hotel_check_out_date',
+        'hotel_check_in_time',
+        'hotel_check_out_time',
+        'hotel_room_number',
+        'hotel_room_type',
+        'hotel_num_nights',
+        'hotel_num_adults',
+        'hotel_num_children',
         'description',
         'remarks',
         'status',
@@ -73,6 +82,11 @@ class ExpenseRecord extends Model
         'toll_amount' => 'decimal:2',
         'toll_entries' => 'array',
         'parking_amount' => 'decimal:2',
+        'hotel_check_in_date' => 'date',
+        'hotel_check_out_date' => 'date',
+        'hotel_num_nights' => 'integer',
+        'hotel_num_adults' => 'integer',
+        'hotel_num_children' => 'integer',
         'duplicate_warning' => 'boolean',
         'ai_confidence_score' => 'decimal:4',
         'submitted_at' => 'datetime',
@@ -177,9 +191,17 @@ class ExpenseRecord extends Model
             'toll' => 'Toll',
             'parking' => 'Parking',
             'travel' => 'Travel Claim',
+            'hotel' => 'Hotel Receipt',
             'receipt' => 'Receipt',
             default => $this->category?->name ?: 'Receipt',
         };
+    }
+
+    public function hasHotelDetails(): bool
+    {
+        return $this->claim_expense_type === 'hotel'
+            || filled($this->hotel_check_in_date)
+            || filled($this->hotel_check_out_date);
     }
 
     public function hasTravelClaimDetails(): bool

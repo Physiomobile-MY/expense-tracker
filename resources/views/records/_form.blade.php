@@ -120,6 +120,7 @@
                     <select class="pm-input" id="claim_expense_type" name="claim_expense_type">
                         @foreach ([
                             'receipt' => 'Receipt',
+                            'hotel' => 'Hotel Receipt',
                             'mileage' => 'Mileage',
                             'toll' => 'Toll',
                             'parking' => 'Parking',
@@ -215,6 +216,48 @@
                         @endif
                     </div>
                 </div>
+                <div class="sm:col-span-2 rounded-lg border border-gray-100 p-3" id="hotel-details-section">
+                    <h3 class="font-semibold text-gray-950">Hotel Details</h3>
+                    <div class="mt-3 grid gap-4 sm:grid-cols-2">
+                        <div>
+                            <label class="pm-label" for="hotel_check_in_date">Check-in Date</label>
+                            <input class="pm-input" id="hotel_check_in_date" name="hotel_check_in_date" type="date" value="{{ old('hotel_check_in_date', $record->hotel_check_in_date?->format('Y-m-d')) }}" data-hotel-checkin>
+                        </div>
+                        <div>
+                            <label class="pm-label" for="hotel_check_out_date">Check-out Date</label>
+                            <input class="pm-input" id="hotel_check_out_date" name="hotel_check_out_date" type="date" value="{{ old('hotel_check_out_date', $record->hotel_check_out_date?->format('Y-m-d')) }}" data-hotel-checkout>
+                        </div>
+                        <div>
+                            <label class="pm-label" for="hotel_check_in_time">Check-in Time</label>
+                            <input class="pm-input" id="hotel_check_in_time" name="hotel_check_in_time" type="time" value="{{ old('hotel_check_in_time', $record->hotel_check_in_time) }}">
+                        </div>
+                        <div>
+                            <label class="pm-label" for="hotel_check_out_time">Check-out Time</label>
+                            <input class="pm-input" id="hotel_check_out_time" name="hotel_check_out_time" type="time" value="{{ old('hotel_check_out_time', $record->hotel_check_out_time) }}">
+                        </div>
+                        <div>
+                            <label class="pm-label" for="hotel_room_number">Room Number</label>
+                            <input class="pm-input" id="hotel_room_number" name="hotel_room_number" value="{{ old('hotel_room_number', $record->hotel_room_number) }}">
+                        </div>
+                        <div>
+                            <label class="pm-label" for="hotel_room_type">Room Type</label>
+                            <input class="pm-input" id="hotel_room_type" name="hotel_room_type" value="{{ old('hotel_room_type', $record->hotel_room_type) }}">
+                        </div>
+                        <div>
+                            <label class="pm-label" for="hotel_num_nights">Number of Nights</label>
+                            <input class="pm-input bg-gray-50" id="hotel_num_nights" name="hotel_num_nights" type="number" min="1" value="{{ old('hotel_num_nights', $record->hotel_num_nights) }}" data-hotel-nights readonly>
+                        </div>
+                        <div>
+                            <label class="pm-label" for="hotel_num_adults">Adults</label>
+                            <input class="pm-input" id="hotel_num_adults" name="hotel_num_adults" type="number" min="0" value="{{ old('hotel_num_adults', $record->hotel_num_adults) }}">
+                        </div>
+                        <div>
+                            <label class="pm-label" for="hotel_num_children">Children</label>
+                            <input class="pm-input" id="hotel_num_children" name="hotel_num_children" type="number" min="0" value="{{ old('hotel_num_children', $record->hotel_num_children) }}">
+                        </div>
+                    </div>
+                </div>
+
                 <div class="sm:col-span-2">
                     <label class="pm-label" for="description">Purpose / description</label>
                     <textarea class="pm-input min-h-24" id="description" name="description">{{ old('description', $record->description) }}</textarea>
@@ -264,3 +307,29 @@
         </div>
     </div>
 </form>
+
+<script>
+(function () {
+    const typeSelect = document.getElementById('claim_expense_type');
+    const hotelSection = document.getElementById('hotel-details-section');
+    const checkinInput = document.querySelector('[data-hotel-checkin]');
+    const checkoutInput = document.querySelector('[data-hotel-checkout]');
+    const nightsInput = document.querySelector('[data-hotel-nights]');
+
+    function toggleHotelSection() {
+        hotelSection.style.display = typeSelect.value === 'hotel' ? '' : 'none';
+    }
+
+    function calcNights() {
+        if (!checkinInput.value || !checkoutInput.value) return;
+        const diff = (new Date(checkoutInput.value) - new Date(checkinInput.value)) / 86400000;
+        nightsInput.value = diff > 0 ? diff : '';
+    }
+
+    typeSelect.addEventListener('change', toggleHotelSection);
+    checkinInput.addEventListener('change', calcNights);
+    checkoutInput.addEventListener('change', calcNights);
+
+    toggleHotelSection();
+})();
+</script>
