@@ -185,12 +185,16 @@ class ExampleTest extends TestCase
         $response = $this->actingAs($user)
             ->post('/upload', [
                 'document_type' => 'receipt',
-                'receipt' => UploadedFile::fake()->create('receipt.pdf', 100, 'application/pdf'),
+                'receipts' => [
+                    UploadedFile::fake()->create('receipt.pdf', 100, 'application/pdf'),
+                ],
             ]);
 
         $response->assertRedirect();
         $this->assertDatabaseCount('expense_records', 1);
         $this->assertDatabaseCount('expense_receipts', 1);
+        $receipt = ExpenseReceipt::first();
+        $this->assertStringStartsWith('receipts/', $receipt->file_path);
         $this->assertDatabaseHas('ai_extraction_logs', ['status' => 'failed']);
     }
 
@@ -205,7 +209,9 @@ class ExampleTest extends TestCase
         $response = $this->actingAs($user)
             ->post('/upload', [
                 'document_type' => 'receipt',
-                'receipt' => UploadedFile::fake()->create('receipt.heic', 100, 'image/heic'),
+                'receipts' => [
+                    UploadedFile::fake()->create('receipt.heic', 100, 'image/heic'),
+                ],
             ]);
 
         $response->assertRedirect();
@@ -275,7 +281,9 @@ class ExampleTest extends TestCase
         $this->actingAs($user)
             ->post('/upload', [
                 'document_type' => 'google_maps_screenshot',
-                'receipt' => UploadedFile::fake()->image('google-maps-route.jpg'),
+                'receipts' => [
+                    UploadedFile::fake()->image('google-maps-route.jpg'),
+                ],
             ])
             ->assertRedirect();
 
@@ -289,6 +297,9 @@ class ExampleTest extends TestCase
         ]);
 
         $record = ExpenseRecord::with('receipts')->first();
+        $receipt = $record->receipts->first();
+
+        $this->assertStringStartsWith('route-screenshots/', $receipt->file_path);
 
         $this->actingAs($user)
             ->put('/records/'.$record->id, [
@@ -320,6 +331,36 @@ class ExampleTest extends TestCase
             ->assertDontSee('Receipt number');
     }
 
+    public function test_route_screenshot_can_be_attached_to_existing_draft(): void
+    {
+        $this->seed();
+        Storage::fake('local');
+
+        $user = User::where('email', 'nidzamyatimi@physiomobile.com')->first();
+        $user->forceFill(['must_change_password' => false])->save();
+
+        $record = ExpenseRecord::create([
+            'user_id' => $user->id,
+            'department_id' => $user->department_id,
+            'status' => 'draft',
+            'currency' => 'MYR',
+            'claim_expense_type' => 'receipt',
+        ]);
+
+        $this->actingAs($user)
+            ->post('/records/'.$record->id.'/receipts', [
+                'document_type' => 'waze_screenshot',
+                'receipt' => UploadedFile::fake()->image('waze-route.jpg'),
+            ])
+            ->assertRedirect();
+
+        $receipt = ExpenseReceipt::first();
+
+        $this->assertSame('waze_screenshot', $receipt->document_type);
+        $this->assertStringStartsWith('route-screenshots/', $receipt->file_path);
+        Storage::disk('local')->assertExists($receipt->file_path);
+    }
+
     public function test_director_can_export_native_xlsx_report(): void
     {
         $this->seed();
@@ -337,6 +378,7 @@ class ExampleTest extends TestCase
     public function test_claim_submission_emails_finance_for_approval(): void
     {
         $this->seed();
+        config(['expenseflow.notifications.finance_approval_email' => 'finance.hq@physiomobile.com']);
         Mail::fake();
 
         $user = User::where('email', 'nidzamyatimi@physiomobile.com')->first();
@@ -405,6 +447,7 @@ class ExampleTest extends TestCase
     public function test_claim_approval_emails_finance_for_payment_follow_up(): void
     {
         $this->seed();
+        config(['expenseflow.notifications.finance_approval_email' => 'finance.hq@physiomobile.com']);
         Mail::fake();
 
         $user = User::where('email', 'nidzamyatimi@physiomobile.com')->first();

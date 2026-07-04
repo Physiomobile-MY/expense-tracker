@@ -13,6 +13,17 @@ class ExpenseReceipt extends Model
 
     public const DOCUMENT_TYPE_GOOGLE_MAPS_SCREENSHOT = 'google_maps_screenshot';
 
+    public const DOCUMENT_TYPES = [
+        self::DOCUMENT_TYPE_RECEIPT,
+        self::DOCUMENT_TYPE_WAZE_SCREENSHOT,
+        self::DOCUMENT_TYPE_GOOGLE_MAPS_SCREENSHOT,
+    ];
+
+    public const ROUTE_DOCUMENT_TYPES = [
+        self::DOCUMENT_TYPE_WAZE_SCREENSHOT,
+        self::DOCUMENT_TYPE_GOOGLE_MAPS_SCREENSHOT,
+    ];
+
     protected $fillable = [
         'expense_record_id',
         'original_filename',
@@ -31,6 +42,23 @@ class ExpenseReceipt extends Model
     public function uploader()
     {
         return $this->belongsTo(User::class, 'uploaded_by');
+    }
+
+    public static function documentTypes(): array
+    {
+        return self::DOCUMENT_TYPES;
+    }
+
+    public static function normalizeDocumentType(?string $documentType): string
+    {
+        return in_array($documentType, self::DOCUMENT_TYPES, true)
+            ? $documentType
+            : self::DOCUMENT_TYPE_RECEIPT;
+    }
+
+    public static function isRouteDocumentType(?string $documentType): bool
+    {
+        return in_array($documentType, self::ROUTE_DOCUMENT_TYPES, true);
     }
 
     public function url(): string
@@ -69,10 +97,7 @@ class ExpenseReceipt extends Model
 
     public function isRouteScreenshot(): bool
     {
-        return in_array($this->document_type, [
-            self::DOCUMENT_TYPE_WAZE_SCREENSHOT,
-            self::DOCUMENT_TYPE_GOOGLE_MAPS_SCREENSHOT,
-        ], true);
+        return self::isRouteDocumentType($this->document_type);
     }
 
     public function documentTypeLabel(): string

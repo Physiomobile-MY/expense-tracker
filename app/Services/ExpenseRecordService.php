@@ -22,37 +22,32 @@ use Throwable;
 
 class ExpenseRecordService
 {
+    private const RECEIPT_UPLOAD_DIRECTORY = 'receipts';
+
+    private const ROUTE_SCREENSHOT_UPLOAD_DIRECTORY = 'route-screenshots';
+
     public function __construct(
         private readonly DuplicateReceiptService $duplicateReceiptService,
     ) {}
 
     public function createDraftFromUpload(User $user, UploadedFile $file, string $documentType = ExpenseReceipt::DOCUMENT_TYPE_RECEIPT): ExpenseRecord
     {
+        $documentType = ExpenseReceipt::normalizeDocumentType($documentType);
+
         return DB::transaction(function () use ($user, $file, $documentType): ExpenseRecord {
             $record = ExpenseRecord::create([
                 'user_id' => $user->id,
                 'department_id' => $user->department_id,
                 'status' => 'draft',
                 'currency' => 'MYR',
-                'merchant_name' => $documentType !== ExpenseReceipt::DOCUMENT_TYPE_RECEIPT
+                'merchant_name' => ExpenseReceipt::isRouteDocumentType($documentType)
                     ? $this->routeMerchantNameForDocumentType($documentType)
                     : null,
-                'claim_expense_type' => $documentType !== ExpenseReceipt::DOCUMENT_TYPE_RECEIPT ? 'mileage' : 'receipt',
+                'claim_expense_type' => ExpenseReceipt::isRouteDocumentType($documentType) ? 'mileage' : 'receipt',
                 'mileage_rate' => $this->mileageRate(),
             ]);
 
-            $directory = $documentType !== ExpenseReceipt::DOCUMENT_TYPE_RECEIPT ? 'route-screenshots' : 'receipts';
-            $path = Storage::putFile($directory.'/'.now()->format('Y/m'), $file);
-
-            ExpenseReceipt::create([
-                'expense_record_id' => $record->id,
-                'original_filename' => $file->getClientOriginalName(),
-                'file_path' => $path,
-                'file_type' => $file->getMimeType() ?: $file->getClientMimeType(),
-                'file_size' => $file->getSize(),
-                'uploaded_by' => $user->id,
-                'document_type' => $documentType,
-            ]);
+            $this->createReceiptFromUpload($record, $user, $file, $documentType);
 
             $this->audit($user, 'receipt_uploaded', 'expense_records', $record->id, null, [
                 'filename' => $file->getClientOriginalName(),
@@ -138,18 +133,8 @@ class ExpenseRecordService
 
     public function attachReceipt(ExpenseRecord $record, User $user, UploadedFile $file, string $documentType): ExpenseReceipt
     {
-        $directory = $documentType !== ExpenseReceipt::DOCUMENT_TYPE_RECEIPT ? 'route-screenshots' : 'receipts';
-        $path = Storage::putFile($directory.'/'.now()->format('Y/m'), $file);
-
-        $receipt = ExpenseReceipt::create([
-            'expense_record_id' => $record->id,
-            'original_filename' => $file->getClientOriginalName(),
-            'file_path' => $path,
-            'file_type' => $file->getMimeType() ?: $file->getClientMimeType(),
-            'file_size' => $file->getSize(),
-            'uploaded_by' => $user->id,
-            'document_type' => $documentType,
-        ]);
+        $documentType = ExpenseReceipt::normalizeDocumentType($documentType);
+        $receipt = $this->createReceiptFromUpload($record, $user, $file, $documentType);
 
         $this->audit($user, 'receipt_attached', 'expense_records', $record->id, null, [
             'filename' => $file->getClientOriginalName(),
@@ -344,6 +329,28 @@ class ExpenseRecordService
         return $monthPrefix.str_pad((string) $next, 5, '0', STR_PAD_LEFT);
     }
 
+    private function createReceiptFromUpload(ExpenseRecord $record, User $user, UploadedFile $file, string $documentType): ExpenseReceipt
+    {
+        $path = Storage::putFile($this->receiptStorageDirectory($documentType).'/'.now()->format('Y/m'), $file);
+
+        return ExpenseReceipt::create([
+            'expense_record_id' => $record->id,
+            'original_filename' => $file->getClientOriginalName(),
+            'file_path' => $path,
+            'file_type' => $file->getMimeType() ?: $file->getClientMimeType(),
+            'file_size' => $file->getSize(),
+            'uploaded_by' => $user->id,
+            'document_type' => $documentType,
+        ]);
+    }
+
+    private function receiptStorageDirectory(string $documentType): string
+    {
+        return ExpenseReceipt::isRouteDocumentType($documentType)
+            ? self::ROUTE_SCREENSHOT_UPLOAD_DIRECTORY
+            : self::RECEIPT_UPLOAD_DIRECTORY;
+    }
+
     private function transition(ExpenseRecord $record, User $actor, string $action, string $newStatus, ?string $remarks = null, array $timestamps = []): ExpenseRecord
     {
         return DB::transaction(function () use ($record, $actor, $action, $newStatus, $remarks, $timestamps): ExpenseRecord {
@@ -536,10 +543,7 @@ class ExpenseRecordService
         $documentType = str((string) ($data['document_type'] ?? ''))->lower()->toString();
         $category = str((string) ($data['claim_category'] ?? ''))->lower()->replace(' ', '_')->toString();
 
-        if (in_array($documentType, [
-            ExpenseReceipt::DOCUMENT_TYPE_WAZE_SCREENSHOT,
-            ExpenseReceipt::DOCUMENT_TYPE_GOOGLE_MAPS_SCREENSHOT,
-        ], true) || filled($data['route_distance_km'] ?? null)) {
+        if (ExpenseReceipt::isRouteDocumentType($documentType) || filled($data['route_distance_km'] ?? null)) {
             return 'mileage';
         }
 

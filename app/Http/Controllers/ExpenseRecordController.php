@@ -12,6 +12,7 @@ use App\Services\ExpenseRecordService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class ExpenseRecordController extends Controller
@@ -134,16 +135,13 @@ class ExpenseRecordController extends Controller
 
         $validated = $request->validate([
             'receipt' => ['required', 'file', 'mimes:jpg,jpeg,png,heic,heif,pdf', 'max:10240'],
-            'document_type' => ['required', 'in:receipt,waze_screenshot,google_maps_screenshot'],
+            'document_type' => ['required', Rule::in(ExpenseReceipt::documentTypes())],
         ], [], [
             'receipt' => 'receipt file',
             'document_type' => 'document type',
         ]);
 
-        $documentType = in_array($validated['document_type'], [
-            ExpenseReceipt::DOCUMENT_TYPE_WAZE_SCREENSHOT,
-            ExpenseReceipt::DOCUMENT_TYPE_GOOGLE_MAPS_SCREENSHOT,
-        ], true) ? $validated['document_type'] : ExpenseReceipt::DOCUMENT_TYPE_RECEIPT;
+        $documentType = ExpenseReceipt::normalizeDocumentType($validated['document_type']);
 
         $records->attachReceipt($record, $request->user(), $validated['receipt'], $documentType);
         ProcessReceiptExtractionJob::dispatchSync($record->id);
@@ -157,7 +155,7 @@ class ExpenseRecordController extends Controller
         abort_if($receipt->expense_record_id !== $record->id, 404);
 
         $validated = $request->validate([
-            'document_type' => ['required', 'in:receipt,waze_screenshot,google_maps_screenshot'],
+            'document_type' => ['required', Rule::in(ExpenseReceipt::documentTypes())],
         ]);
 
         $receipt->update($validated);

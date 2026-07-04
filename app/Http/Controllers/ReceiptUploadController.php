@@ -7,6 +7,7 @@ use App\Models\ExpenseReceipt;
 use App\Services\ExpenseRecordService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class ReceiptUploadController extends Controller
@@ -21,18 +22,14 @@ class ReceiptUploadController extends Controller
         $validated = $request->validate([
             'receipts' => ['required', 'array', 'min:1', 'max:10'],
             'receipts.*' => ['required', 'file', 'mimes:jpg,jpeg,png,heic,heif,pdf', 'max:10240'],
-            'document_type' => ['required', 'in:receipt,waze_screenshot,google_maps_screenshot'],
+            'document_type' => ['required', Rule::in(ExpenseReceipt::documentTypes())],
         ], [], [
             'receipts' => 'receipt files',
             'receipts.*' => 'receipt file',
             'document_type' => 'upload type',
         ]);
 
-        $documentType = in_array($validated['document_type'], [
-            ExpenseReceipt::DOCUMENT_TYPE_WAZE_SCREENSHOT,
-            ExpenseReceipt::DOCUMENT_TYPE_GOOGLE_MAPS_SCREENSHOT,
-        ], true) ? $validated['document_type'] : ExpenseReceipt::DOCUMENT_TYPE_RECEIPT;
-
+        $documentType = ExpenseReceipt::normalizeDocumentType($validated['document_type']);
         $files = $validated['receipts'];
         $createdRecords = [];
 
