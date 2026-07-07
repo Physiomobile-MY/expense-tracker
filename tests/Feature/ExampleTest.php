@@ -331,6 +331,57 @@ class ExampleTest extends TestCase
             ->assertDontSee('Receipt number');
     }
 
+    public function test_record_edit_form_keeps_submit_buttons_inside_main_form_when_receipts_have_actions(): void
+    {
+        $this->withoutVite();
+        $this->seed();
+
+        $user = User::where('email', 'nidzamyatimi@physiomobile.com')->first();
+        $user->forceFill(['must_change_password' => false])->save();
+
+        $record = ExpenseRecord::create([
+            'user_id' => $user->id,
+            'department_id' => $user->department_id,
+            'expense_category_id' => ExpenseCategory::first()->id,
+            'claim_reference_no' => 'PMEXP-202605-01301',
+            'record_type' => ExpenseRecord::TYPE_CLAIMABLE,
+            'merchant_name' => 'Hayaki Kopitiam',
+            'receipt_date' => '2026-05-21',
+            'currency' => 'MYR',
+            'total_amount' => '12.50',
+            'status' => 'draft',
+        ]);
+
+        $receipt = ExpenseReceipt::create([
+            'expense_record_id' => $record->id,
+            'original_filename' => 'receipt.jpg',
+            'file_path' => 'receipts/receipt.jpg',
+            'file_type' => 'image/jpeg',
+            'file_size' => 1200,
+            'uploaded_by' => $user->id,
+            'document_type' => ExpenseReceipt::DOCUMENT_TYPE_RECEIPT,
+        ]);
+
+        $response = $this->actingAs($user)
+            ->get('/records/'.$record->id.'/edit')
+            ->assertOk();
+
+        $html = $response->getContent();
+        $this->assertStringContainsString('name="intent" value="claimable"', $html);
+        $this->assertStringContainsString('form="receipt-update-form-'.$receipt->id.'"', $html);
+        $this->assertStringContainsString('id="receipt-update-form-'.$receipt->id.'"', $html);
+
+        $dom = new \DOMDocument();
+        @$dom->loadHTML($html);
+        $xpath = new \DOMXPath($dom);
+
+        $this->assertSame(0, $xpath->query('//form//form')->length);
+        $claimableButtonForm = $xpath->query('//button[@name="intent" and @value="claimable"]/ancestor::form[1]');
+
+        $this->assertSame(1, $claimableButtonForm->length);
+        $this->assertStringContainsString('/records/'.$record->id, $claimableButtonForm->item(0)->getAttribute('action'));
+    }
+
     public function test_route_screenshot_can_be_attached_to_existing_draft(): void
     {
         $this->seed();

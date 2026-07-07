@@ -59,18 +59,14 @@
 
                             {{-- Document type selector (inline PATCH) --}}
                             @if ($canEdit)
-                                <form method="POST" action="{{ route('records.receipts.update', [$record, $receipt]) }}" class="mt-2">
-                                    @csrf
-                                    @method('PATCH')
-                                    <div class="flex items-center gap-2">
-                                        <select class="pm-input py-1 text-xs" name="document_type" onchange="this.form.submit()">
-                                            <option value="receipt" @selected($receipt->document_type === 'receipt')>Receipt</option>
-                                            <option value="waze_screenshot" @selected($receipt->document_type === 'waze_screenshot')>Waze Screenshot</option>
-                                            <option value="google_maps_screenshot" @selected($receipt->document_type === 'google_maps_screenshot')>Google Maps</option>
-                                        </select>
-                                        <a href="{{ route('receipts.file', $receipt) }}" target="_blank" class="shrink-0 text-xs font-semibold text-[#D71920]">Open</a>
-                                    </div>
-                                </form>
+                                <div class="mt-2 flex items-center gap-2 max-sm:flex-col max-sm:items-stretch">
+                                    <select class="pm-input py-1 text-xs" name="document_type" form="receipt-update-form-{{ $receipt->id }}" onchange="this.form.submit()">
+                                        <option value="receipt" @selected($receipt->document_type === 'receipt')>Receipt</option>
+                                        <option value="waze_screenshot" @selected($receipt->document_type === 'waze_screenshot')>Waze Screenshot</option>
+                                        <option value="google_maps_screenshot" @selected($receipt->document_type === 'google_maps_screenshot')>Google Maps</option>
+                                    </select>
+                                    <a href="{{ route('receipts.file', $receipt) }}" target="_blank" class="shrink-0 text-xs font-semibold text-[#D71920]">Open</a>
+                                </div>
                             @else
                                 <p class="mt-1 text-xs text-gray-500">{{ $receipt->documentTypeLabel() }}</p>
                                 <a href="{{ route('receipts.file', $receipt) }}" target="_blank" class="mt-1 inline-block text-xs font-semibold text-[#D71920]">Open</a>
@@ -79,11 +75,7 @@
 
                         {{-- Delete --}}
                         @if ($canEdit && $record->receipts->count() > 1)
-                            <form method="POST" action="{{ route('records.receipts.destroy', [$record, $receipt]) }}" onsubmit="return confirm('Remove this receipt?')">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="mt-1 text-xs font-semibold text-gray-400 hover:text-red-600" title="Remove">✕</button>
-                            </form>
+                            <button type="submit" form="receipt-delete-form-{{ $receipt->id }}" class="mt-1 text-xs font-semibold text-gray-400 hover:text-red-600" title="Remove">✕</button>
                         @endif
                     </div>
                 @empty
@@ -98,11 +90,10 @@
                         <span>+ Attach another receipt</span>
                     </button>
                     <div class="hidden px-4 pb-4" id="attach-form">
-                        <form method="POST" action="{{ route('records.receipts.store', $record) }}" enctype="multipart/form-data" class="space-y-3" data-attach-form>
-                            @csrf
+                        <div class="space-y-3" data-attach-form>
                             <div>
                                 <label class="pm-label" for="attach_document_type">Type</label>
-                                <select class="pm-input" id="attach_document_type" name="document_type">
+                                <select class="pm-input" id="attach_document_type" name="document_type" form="receipt-attach-form">
                                     <option value="receipt">Receipt</option>
                                     <option value="waze_screenshot">Waze Screenshot</option>
                                     <option value="google_maps_screenshot">Google Maps Screenshot</option>
@@ -110,17 +101,17 @@
                             </div>
                             <div>
                                 <label class="pm-label" for="attach_receipt">File</label>
-                                <input class="pm-input file:mr-2 file:rounded file:border-0 file:bg-[#FDECEC] file:px-2 file:py-1 file:text-xs file:font-semibold file:text-[#A80F16]" id="attach_receipt" name="receipt" type="file" accept=".jpg,.jpeg,.png,.heic,.heif,.pdf,image/jpeg,image/png,image/heic,image/heif,application/pdf" required>
+                                <input class="pm-input file:mr-2 file:rounded file:border-0 file:bg-[#FDECEC] file:px-2 file:py-1 file:text-xs file:font-semibold file:text-[#A80F16]" id="attach_receipt" name="receipt" type="file" accept=".jpg,.jpeg,.png,.heic,.heif,.pdf,image/jpeg,image/png,image/heic,image/heif,application/pdf" form="receipt-attach-form" required>
                                 <p class="mt-1 text-xs text-gray-400">Max 10 MB. AI will re-scan and update categorization.</p>
                             </div>
-                            <button class="pm-btn-primary w-full py-2 text-sm" type="submit" data-attach-submit>
+                            <button class="pm-btn-primary w-full py-2 text-sm" type="submit" form="receipt-attach-form" data-attach-submit>
                                 <span data-attach-text>Attach & Scan</span>
                                 <span class="hidden items-center gap-2" data-attach-loading>
                                     <span class="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white"></span>
                                     Scanning...
                                 </span>
                             </button>
-                        </form>
+                        </div>
                     </div>
                 </div>
             @endif
@@ -268,7 +259,7 @@
                             <input class="pm-input" id="route_arrival_time" name="route_arrival_time" value="{{ old('route_arrival_time', $record->route_arrival_time) }}">
                         </div>
                         <div class="sm:col-span-2">
-                            <div class="flex items-center justify-between gap-3">
+                            <div class="flex items-center justify-between gap-3 max-sm:flex-col max-sm:items-stretch">
                                 <label class="pm-label mb-0" for="toll_amount">Tolls</label>
                                 <button class="pm-btn-secondary px-3 py-2 text-sm" type="button" data-add-toll>Add Toll</button>
                             </div>
@@ -418,7 +409,7 @@
         </section>
     @endunless
 
-    <div class="rounded-lg border border-gray-200 bg-white p-3 shadow-sm lg:sticky lg:bottom-4 lg:z-20 lg:shadow-lg">
+    <div class="pm-mobile-action-bar">
         <div class="grid gap-2 sm:grid-cols-3">
             <button class="pm-btn-secondary" type="submit" name="intent" value="save">Save Draft</button>
             <button class="pm-btn-primary" type="submit" name="intent" value="claimable">Submit for Approval</button>
@@ -426,6 +417,26 @@
         </div>
     </div>
 </form>
+
+@if ($canEdit)
+    @foreach ($record->receipts as $receipt)
+        <form id="receipt-update-form-{{ $receipt->id }}" method="POST" action="{{ route('records.receipts.update', [$record, $receipt]) }}" class="hidden">
+            @csrf
+            @method('PATCH')
+        </form>
+
+        @if ($record->receipts->count() > 1)
+            <form id="receipt-delete-form-{{ $receipt->id }}" method="POST" action="{{ route('records.receipts.destroy', [$record, $receipt]) }}" class="hidden" onsubmit="return confirm('Remove this receipt?')">
+                @csrf
+                @method('DELETE')
+            </form>
+        @endif
+    @endforeach
+
+    <form id="receipt-attach-form" method="POST" action="{{ route('records.receipts.store', $record) }}" enctype="multipart/form-data" class="hidden">
+        @csrf
+    </form>
+@endif
 
 <script>
 (function () {
@@ -480,12 +491,12 @@
         toggleBtn.addEventListener('click', () => {
             attachForm.classList.toggle('hidden');
         });
-        const attachFormEl = document.querySelector('[data-attach-form]');
+        const attachFormEl = document.getElementById('receipt-attach-form');
         if (attachFormEl) {
             attachFormEl.addEventListener('submit', function () {
-                const btn = this.querySelector('[data-attach-submit]');
-                const text = this.querySelector('[data-attach-text]');
-                const loading = this.querySelector('[data-attach-loading]');
+                const btn = document.querySelector('[data-attach-submit]');
+                const text = document.querySelector('[data-attach-text]');
+                const loading = document.querySelector('[data-attach-loading]');
                 if (btn) btn.disabled = true;
                 if (text) text.classList.add('hidden');
                 if (loading) { loading.classList.remove('hidden'); loading.classList.add('flex'); }
