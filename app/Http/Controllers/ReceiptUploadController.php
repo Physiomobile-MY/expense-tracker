@@ -36,17 +36,17 @@ class ReceiptUploadController extends Controller
         foreach ($files as $file) {
             $record = $records->createDraftFromUpload($request->user(), $file, $documentType);
             ProcessReceiptExtractionJob::dispatchSync($record->id);
-            $createdRecords[] = $record;
+            $createdRecords[] = $records->submitUploadedDraft($record->fresh(), $request->user());
         }
 
         if (count($createdRecords) === 1) {
             return redirect()
-                ->route('records.edit', $createdRecords[0])
-                ->with('status', 'Upload scanned successfully. Please review the details before saving.');
+                ->route('records.show', $createdRecords[0])
+                ->with('status', 'Receipt scanned and submitted for review.');
         }
 
         return redirect()
             ->route('records.index')
-            ->with('status', count($createdRecords).' receipts uploaded and scanned. Please review each one before submitting.');
+            ->with('status', count($createdRecords).' receipts scanned and submitted for review.');
     }
 }

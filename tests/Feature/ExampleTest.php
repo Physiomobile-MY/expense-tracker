@@ -174,10 +174,11 @@ class ExampleTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_director_can_upload_receipt_for_manual_review_when_ai_is_not_configured(): void
+    public function test_director_upload_is_submitted_for_review_when_ai_is_not_configured(): void
     {
         $this->seed();
         Storage::fake('local');
+        Mail::fake();
 
         $user = User::where('email', 'nidzamyatimi@physiomobile.com')->first();
         $user->forceFill(['must_change_password' => false])->save();
@@ -196,12 +197,18 @@ class ExampleTest extends TestCase
         $receipt = ExpenseReceipt::first();
         $this->assertStringStartsWith('receipts/', $receipt->file_path);
         $this->assertDatabaseHas('ai_extraction_logs', ['status' => 'failed']);
+        $record = ExpenseRecord::first();
+        $this->assertSame('pending_review', $record->status);
+        $this->assertSame(ExpenseRecord::TYPE_CLAIMABLE, $record->record_type);
+        $this->assertNotNull($record->claim_reference_no);
+        $this->assertNotNull($record->submitted_at);
     }
 
     public function test_director_can_upload_heic_receipt(): void
     {
         $this->seed();
         Storage::fake('local');
+        Mail::fake();
 
         $user = User::where('email', 'nidzamyatimi@physiomobile.com')->first();
         $user->forceFill(['must_change_password' => false])->save();
@@ -219,6 +226,37 @@ class ExampleTest extends TestCase
         $this->assertDatabaseHas('expense_receipts', [
             'original_filename' => 'receipt.heic',
         ]);
+        $this->assertDatabaseHas('expense_records', [
+            'status' => 'pending_review',
+            'record_type' => ExpenseRecord::TYPE_CLAIMABLE,
+        ]);
+    }
+
+    public function test_both_seeded_directors_upload_receipts_as_pending_review(): void
+    {
+        $this->seed();
+        Storage::fake('local');
+        Mail::fake();
+
+        foreach (['nidzamyatimi@physiomobile.com', 'saiful@physiomobile.com'] as $index => $email) {
+            $user = User::where('email', $email)->firstOrFail();
+            $user->forceFill(['must_change_password' => false])->save();
+
+            $this->actingAs($user)
+                ->post('/upload', [
+                    'document_type' => 'receipt',
+                    'receipts' => [
+                        UploadedFile::fake()->create('receipt-'.($index + 1).'.pdf', 100, 'application/pdf'),
+                    ],
+                ])
+                ->assertRedirect();
+
+            $record = ExpenseRecord::where('user_id', $user->id)->latest('id')->firstOrFail();
+
+            $this->assertSame('pending_review', $record->status);
+            $this->assertSame(ExpenseRecord::TYPE_CLAIMABLE, $record->record_type);
+            $this->assertNotNull($record->submitted_at);
+        }
     }
 
     public function test_waze_mileage_claim_calculates_mileage_toll_and_parking_total(): void
@@ -269,7 +307,7 @@ class ExampleTest extends TestCase
         $this->assertSame('Mileage claim to Klinik Ehsan Bandar Sri Permaisuri', $record->description);
     }
 
-    public function test_google_maps_screenshot_upload_creates_route_claim_draft(): void
+    public function test_google_maps_screenshot_upload_creates_pending_route_claim(): void
     {
         $this->withoutVite();
         $this->seed();
