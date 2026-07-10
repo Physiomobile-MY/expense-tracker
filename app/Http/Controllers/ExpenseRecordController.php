@@ -70,13 +70,16 @@ class ExpenseRecordController extends Controller
     public function update(Request $request, ExpenseRecord $record, ExpenseRecordService $records): RedirectResponse
     {
         $this->authorizeVisible($request, $record);
+        $intent = $request->input('intent_override', $request->input('intent'));
 
-        if (in_array($request->input('intent'), ['claimable', 'non_claimable'], true)) {
-            $request->merge(['record_type' => $request->input('intent')]);
+        if (in_array($intent, ['claimable', 'non_claimable'], true)) {
+            $request->merge(['record_type' => $intent]);
             $records->submit($record, $request->user(), $this->validatedRecordData($request, true));
 
             return redirect()->route('records.show', $record)->with('status', 'Expense record submitted.');
         }
+
+        abort_unless($intent === 'save', 422, 'A valid receipt action is required.');
 
         $records->updateDraft($record, $request->user(), $this->validatedRecordData($request));
 

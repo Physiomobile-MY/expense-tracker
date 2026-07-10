@@ -368,18 +368,54 @@ class ExampleTest extends TestCase
 
         $html = $response->getContent();
         $this->assertStringContainsString('name="intent" value="claimable"', $html);
+        $this->assertStringContainsString('name="intent_override" value="save"', $html);
+        $this->assertStringContainsString('name="intent_override" value="non_claimable"', $html);
         $this->assertStringContainsString('form="receipt-update-form-'.$receipt->id.'"', $html);
         $this->assertStringContainsString('id="receipt-update-form-'.$receipt->id.'"', $html);
 
-        $dom = new \DOMDocument();
+        $dom = new \DOMDocument;
         @$dom->loadHTML($html);
         $xpath = new \DOMXPath($dom);
 
         $this->assertSame(0, $xpath->query('//form//form')->length);
-        $claimableButtonForm = $xpath->query('//button[@name="intent" and @value="claimable"]/ancestor::form[1]');
+        $claimableButtonForm = $xpath->query('//input[@name="intent" and @value="claimable"]/ancestor::form[1]');
 
         $this->assertSame(1, $claimableButtonForm->length);
         $this->assertStringContainsString('/records/'.$record->id, $claimableButtonForm->item(0)->getAttribute('action'));
+    }
+
+    public function test_both_seeded_directors_submit_claims_as_pending_review(): void
+    {
+        $this->seed();
+        Mail::fake();
+
+        foreach (['nidzamyatimi@physiomobile.com', 'saiful@physiomobile.com'] as $index => $email) {
+            $user = User::where('email', $email)->firstOrFail();
+            $user->forceFill(['must_change_password' => false])->save();
+
+            $record = ExpenseRecord::create([
+                'user_id' => $user->id,
+                'department_id' => $user->department_id,
+                'status' => 'draft',
+                'currency' => 'MYR',
+            ]);
+
+            $this->actingAs($user)
+                ->put('/records/'.$record->id, [
+                    'intent' => 'claimable',
+                    'merchant_name' => 'Submission Test '.($index + 1),
+                    'receipt_date' => '2026-07-10',
+                    'currency' => 'MYR',
+                    'total_amount' => '10.00',
+                ])
+                ->assertRedirect('/records/'.$record->id);
+
+            $record->refresh();
+
+            $this->assertSame('pending_review', $record->status);
+            $this->assertSame(ExpenseRecord::TYPE_CLAIMABLE, $record->record_type);
+            $this->assertNotNull($record->submitted_at);
+        }
     }
 
     public function test_route_screenshot_can_be_attached_to_existing_draft(): void

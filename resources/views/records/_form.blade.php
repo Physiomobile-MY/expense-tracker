@@ -17,6 +17,7 @@
 <form method="POST" action="{{ route('records.update', $record) }}" class="space-y-5">
     @csrf
     @method('PUT')
+    <input type="hidden" name="intent" value="claimable">
 
     <div class="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
         {{-- Left panel: All attached receipts --}}
@@ -411,9 +412,9 @@
 
     <div class="pm-mobile-action-bar">
         <div class="grid gap-2 sm:grid-cols-3">
-            <button class="pm-btn-secondary" type="submit" name="intent" value="save">Save Draft</button>
-            <button class="pm-btn-primary" type="submit" name="intent" value="claimable">Submit for Approval</button>
-            <button class="pm-btn-secondary" type="submit" name="intent" value="non_claimable">Save as Record</button>
+            <button class="pm-btn-secondary" type="submit" name="intent_override" value="save">Save Draft</button>
+            <button class="pm-btn-primary" type="submit">Submit for Approval</button>
+            <button class="pm-btn-secondary" type="submit" name="intent_override" value="non_claimable">Save as Record</button>
         </div>
     </div>
 </form>
