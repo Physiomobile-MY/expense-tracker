@@ -30,6 +30,15 @@
         </div>
         @if (auth()->user()->canManageExpenses())
             <div>
+                <label class="pm-label" for="staff_id">Nama Staff</label>
+                <select class="pm-input" id="staff_id" name="staff_id">
+                    <option value="">Semua Staff</option>
+                    @foreach ($staff as $member)
+                        <option value="{{ $member->id }}" @selected((string) request('staff_id') === (string) $member->id)>{{ $member->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
                 <label class="pm-label" for="department_id">Department</label>
                 <select class="pm-input" id="department_id" name="department_id">
                     <option value="">All</option>

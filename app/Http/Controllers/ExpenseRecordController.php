@@ -8,6 +8,7 @@ use App\Models\Department;
 use App\Models\ExpenseCategory;
 use App\Models\ExpenseReceipt;
 use App\Models\ExpenseRecord;
+use App\Models\User;
 use App\Services\ExpenseRecordService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -37,6 +38,11 @@ class ExpenseRecordController extends Controller
             'records' => $records,
             'departments' => Department::where('status', 'active')->orderBy('name')->get(),
             'categories' => ExpenseCategory::where('status', 'active')->orderBy('name')->get(),
+            'staff' => User::query()
+                ->where('status', 'active')
+                ->whereIn('role', ['staff', 'executive'])
+                ->orderBy('name')
+                ->get(),
             'statuses' => array_merge(config('expenseflow.claimable_statuses'), config('expenseflow.non_claimable_statuses')),
         ]);
     }

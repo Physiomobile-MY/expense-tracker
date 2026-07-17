@@ -174,6 +174,61 @@ class ExampleTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_finance_can_filter_records_by_staff_name(): void
+    {
+        $this->withoutVite();
+        $this->seed();
+
+        $finance = User::factory()->create([
+            'role' => 'admin_finance',
+            'status' => 'active',
+            'must_change_password' => false,
+        ]);
+        $finance->syncRoles(['admin_finance']);
+        $selectedStaff = User::factory()->create([
+            'name' => 'Aisyah Staff',
+            'role' => 'staff',
+            'status' => 'active',
+        ]);
+        $otherStaff = User::factory()->create([
+            'name' => 'Balqis Staff',
+            'role' => 'staff',
+            'status' => 'active',
+        ]);
+        $category = ExpenseCategory::first();
+
+        ExpenseRecord::create([
+            'user_id' => $selectedStaff->id,
+            'expense_category_id' => $category->id,
+            'claim_reference_no' => 'PMEXP-STAFF-001',
+            'record_type' => ExpenseRecord::TYPE_CLAIMABLE,
+            'merchant_name' => 'Selected Staff Merchant',
+            'receipt_date' => '2026-07-17',
+            'currency' => 'MYR',
+            'total_amount' => '25.00',
+            'status' => 'pending_review',
+        ]);
+        ExpenseRecord::create([
+            'user_id' => $otherStaff->id,
+            'expense_category_id' => $category->id,
+            'claim_reference_no' => 'PMEXP-STAFF-002',
+            'record_type' => ExpenseRecord::TYPE_CLAIMABLE,
+            'merchant_name' => 'Other Staff Merchant',
+            'receipt_date' => '2026-07-17',
+            'currency' => 'MYR',
+            'total_amount' => '50.00',
+            'status' => 'pending_review',
+        ]);
+
+        $this->actingAs($finance)
+            ->get('/records?staff_id='.$selectedStaff->id)
+            ->assertOk()
+            ->assertSee('Nama Staff')
+            ->assertSee('Aisyah Staff')
+            ->assertSee('Selected Staff Merchant')
+            ->assertDontSee('Other Staff Merchant');
+    }
+
     public function test_director_upload_stays_draft_for_review_when_ai_is_not_configured(): void
     {
         $this->seed();
