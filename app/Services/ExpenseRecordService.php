@@ -57,21 +57,6 @@ class ExpenseRecordService
         });
     }
 
-    public function submitUploadedDraft(ExpenseRecord $record, User $actor): ExpenseRecord
-    {
-        $record->loadMissing('items');
-
-        return $this->submit($record, $actor, [
-            'record_type' => ExpenseRecord::TYPE_CLAIMABLE,
-            'items' => $record->items->map(fn ($item): array => [
-                'description' => $item->description,
-                'quantity' => $item->quantity,
-                'unit_price' => $item->unit_price,
-                'amount' => $item->amount,
-            ])->all(),
-        ]);
-    }
-
     public function applyExtraction(ExpenseRecord $record, array $data): void
     {
         $claimExpenseType = $this->claimExpenseTypeFromExtraction($data, $record);
