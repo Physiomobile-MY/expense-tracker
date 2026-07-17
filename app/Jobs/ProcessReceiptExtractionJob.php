@@ -18,43 +18,44 @@ class ProcessReceiptExtractionJob implements ShouldQueue
 
     public function __construct(
         public readonly int $expenseRecordId,
+        public readonly ?int $expenseReceiptId = null,
     ) {}
 
     public function handle(OpenAIReceiptExtractionService $extractor, ExpenseRecordService $records): void
     {
         $record = ExpenseRecord::with('receipts')->findOrFail($this->expenseRecordId);
-        $receipt = $record->receipts()->latest()->first();
+        $receipts = $this->expenseReceiptId
+            ? $record->receipts()->whereKey($this->expenseReceiptId)->get()
+            : $record->receipts;
 
-        if (! $receipt) {
-            return;
-        }
+        foreach ($receipts as $receipt) {
+            try {
+                $result = $extractor->extract($receipt);
 
-        try {
-            $result = $extractor->extract($receipt);
+                AIExtractionLog::create([
+                    'expense_record_id' => $record->id,
+                    'provider' => 'openai',
+                    'model' => $result['model'] ?? config('services.openai.receipt_model'),
+                    'prompt' => $result['prompt'],
+                    'raw_response' => json_encode($result['raw_response']),
+                    'extracted_json' => $result['extracted_json'],
+                    'confidence_score' => $result['confidence_score'],
+                    'status' => 'completed',
+                    'token_usage_input' => $result['token_usage_input'],
+                    'token_usage_output' => $result['token_usage_output'],
+                ]);
 
-            AIExtractionLog::create([
-                'expense_record_id' => $record->id,
-                'provider' => 'openai',
-                'model' => $result['model'] ?? config('services.openai.receipt_model'),
-                'prompt' => $result['prompt'],
-                'raw_response' => json_encode($result['raw_response']),
-                'extracted_json' => $result['extracted_json'],
-                'confidence_score' => $result['confidence_score'],
-                'status' => 'completed',
-                'token_usage_input' => $result['token_usage_input'],
-                'token_usage_output' => $result['token_usage_output'],
-            ]);
-
-            $records->applyExtraction($record, $result['extracted_json']);
-        } catch (Throwable $exception) {
-            AIExtractionLog::create([
-                'expense_record_id' => $record->id,
-                'provider' => 'openai',
-                'model' => config('services.openai.receipt_model'),
-                'prompt' => config('expenseflow.receipt_prompt'),
-                'status' => 'failed',
-                'error_message' => $exception->getMessage(),
-            ]);
+                $records->applyExtraction($record, $result['extracted_json']);
+            } catch (Throwable $exception) {
+                AIExtractionLog::create([
+                    'expense_record_id' => $record->id,
+                    'provider' => 'openai',
+                    'model' => config('services.openai.receipt_model'),
+                    'prompt' => config('expenseflow.receipt_prompt'),
+                    'status' => 'failed',
+                    'error_message' => $exception->getMessage(),
+                ]);
+            }
         }
     }
 }
