@@ -174,7 +174,7 @@ class ExampleTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_director_upload_is_submitted_for_approval_when_ai_is_not_configured(): void
+    public function test_director_upload_stays_draft_for_review_when_ai_is_not_configured(): void
     {
         $this->seed();
         Storage::fake('local');
@@ -193,16 +193,23 @@ class ExampleTest extends TestCase
 
         $record = ExpenseRecord::firstOrFail();
 
-        $response->assertRedirect('/records/'.$record->id);
+        $response->assertRedirect('/records/'.$record->id.'/edit');
         $this->assertDatabaseCount('expense_records', 1);
         $this->assertDatabaseCount('expense_receipts', 1);
         $receipt = ExpenseReceipt::first();
         $this->assertStringStartsWith('receipts/', $receipt->file_path);
         $this->assertDatabaseHas('ai_extraction_logs', ['status' => 'failed']);
-        $this->assertSame('pending_review', $record->status);
-        $this->assertSame(ExpenseRecord::TYPE_CLAIMABLE, $record->record_type);
-        $this->assertNotNull($record->claim_reference_no);
-        $this->assertNotNull($record->submitted_at);
+        $this->assertSame('draft', $record->status);
+        $this->assertNull($record->record_type);
+        $this->assertNull($record->claim_reference_no);
+        $this->assertNull($record->submitted_at);
+
+        $this->withoutVite();
+        $this->actingAs($user)
+            ->get('/records/'.$record->id.'/edit')
+            ->assertOk()
+            ->assertSee('Submit for Approval')
+            ->assertDontSee('>Approve<', false);
     }
 
     public function test_director_can_upload_heic_receipt(): void
@@ -228,12 +235,12 @@ class ExampleTest extends TestCase
             'original_filename' => 'receipt.heic',
         ]);
         $this->assertDatabaseHas('expense_records', [
-            'status' => 'pending_review',
-            'record_type' => ExpenseRecord::TYPE_CLAIMABLE,
+            'status' => 'draft',
+            'record_type' => null,
         ]);
     }
 
-    public function test_both_seeded_directors_upload_receipts_as_pending_review(): void
+    public function test_both_seeded_directors_upload_receipts_as_drafts(): void
     {
         $this->seed();
         Storage::fake('local');
@@ -254,9 +261,9 @@ class ExampleTest extends TestCase
 
             $record = ExpenseRecord::where('user_id', $user->id)->latest('id')->firstOrFail();
 
-            $this->assertSame('pending_review', $record->status);
-            $this->assertSame(ExpenseRecord::TYPE_CLAIMABLE, $record->record_type);
-            $this->assertNotNull($record->submitted_at);
+            $this->assertSame('draft', $record->status);
+            $this->assertNull($record->record_type);
+            $this->assertNull($record->submitted_at);
         }
     }
 
@@ -308,7 +315,7 @@ class ExampleTest extends TestCase
         $this->assertSame('Mileage claim to Klinik Ehsan Bandar Sri Permaisuri', $record->description);
     }
 
-    public function test_google_maps_screenshot_upload_creates_pending_route_claim(): void
+    public function test_google_maps_screenshot_upload_creates_route_claim_draft(): void
     {
         $this->withoutVite();
         $this->seed();
@@ -338,8 +345,8 @@ class ExampleTest extends TestCase
         $record = ExpenseRecord::with('receipts')->first();
         $receipt = $record->receipts->first();
 
-        $this->assertSame('pending_review', $record->status);
-        $this->assertNotNull($record->submitted_at);
+        $this->assertSame('draft', $record->status);
+        $this->assertNull($record->submitted_at);
         $this->assertStringStartsWith('route-screenshots/', $receipt->file_path);
 
         $this->actingAs($user)
