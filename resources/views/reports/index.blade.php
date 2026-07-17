@@ -24,7 +24,7 @@
             <input class="pm-input" id="date_to" name="date_to" type="date" value="{{ request('date_to') }}">
         </div>
         <div>
-            <label class="pm-label" for="staff_id">Staff</label>
+            <label class="pm-label" for="staff_id">Staff / User</label>
             <select class="pm-input" id="staff_id" name="staff_id">
                 <option value="">All</option>
                 @foreach ($staff as $member)

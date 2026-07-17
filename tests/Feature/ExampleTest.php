@@ -591,6 +591,49 @@ class ExampleTest extends TestCase
         $this->assertDatabaseCount('ai_extraction_logs', 2);
     }
 
+    public function test_export_centre_can_filter_by_super_admin_user(): void
+    {
+        $this->withoutVite();
+        $this->seed();
+
+        $viewer = User::where('email', 'nidzamyatimi@physiomobile.com')->firstOrFail();
+        $selectedSuperAdmin = User::where('email', 'saiful@physiomobile.com')->firstOrFail();
+        $viewer->forceFill(['must_change_password' => false])->save();
+        $selectedSuperAdmin->forceFill(['must_change_password' => false])->save();
+        $category = ExpenseCategory::firstOrFail();
+
+        ExpenseRecord::create([
+            'user_id' => $selectedSuperAdmin->id,
+            'expense_category_id' => $category->id,
+            'claim_reference_no' => 'PMEXP-SUPERADMIN-001',
+            'record_type' => ExpenseRecord::TYPE_CLAIMABLE,
+            'merchant_name' => 'Selected Super Admin Merchant',
+            'receipt_date' => '2026-07-17',
+            'currency' => 'MYR',
+            'total_amount' => '75.00',
+            'status' => 'pending_review',
+        ]);
+        ExpenseRecord::create([
+            'user_id' => $viewer->id,
+            'expense_category_id' => $category->id,
+            'claim_reference_no' => 'PMEXP-SUPERADMIN-002',
+            'record_type' => ExpenseRecord::TYPE_CLAIMABLE,
+            'merchant_name' => 'Other Super Admin Merchant',
+            'receipt_date' => '2026-07-17',
+            'currency' => 'MYR',
+            'total_amount' => '85.00',
+            'status' => 'pending_review',
+        ]);
+
+        $this->actingAs($viewer)
+            ->get('/reports?staff_id='.$selectedSuperAdmin->id)
+            ->assertOk()
+            ->assertSee('Staff / User')
+            ->assertSee($selectedSuperAdmin->name)
+            ->assertSee('Selected Super Admin Merchant')
+            ->assertDontSee('Other Super Admin Merchant');
+    }
+
     public function test_director_can_export_native_xlsx_report(): void
     {
         $this->seed();

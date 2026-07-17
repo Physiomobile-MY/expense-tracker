@@ -32,7 +32,7 @@ class ReportController extends Controller
             ],
             'departments' => Department::where('status', 'active')->orderBy('name')->get(),
             'categories' => ExpenseCategory::where('status', 'active')->orderBy('name')->get(),
-            'staff' => User::where('role', 'staff')->orderBy('name')->get(),
+            'staff' => User::where('status', 'active')->orderBy('name')->get(),
         ]);
     }
 
