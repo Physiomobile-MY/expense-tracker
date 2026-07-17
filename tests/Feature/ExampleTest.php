@@ -172,6 +172,13 @@ class ExampleTest extends TestCase
         $this->actingAs($executive)
             ->get('/reports')
             ->assertForbidden();
+
+        $this->actingAs($executive)
+            ->patch('/reports/bulk-status', [
+                'record_ids' => [$ownRecord->id],
+                'status' => 'approved',
+            ])
+            ->assertForbidden();
     }
 
     public function test_finance_can_filter_records_by_staff_name(): void
@@ -632,6 +639,75 @@ class ExampleTest extends TestCase
             ->assertSee($selectedSuperAdmin->name)
             ->assertSee('Selected Super Admin Merchant')
             ->assertDontSee('Other Super Admin Merchant');
+    }
+
+    public function test_finance_can_bulk_change_selected_report_record_statuses(): void
+    {
+        $this->withoutVite();
+        $this->seed();
+
+        $finance = User::factory()->create([
+            'role' => 'admin_finance',
+            'status' => 'active',
+            'must_change_password' => false,
+        ]);
+        $finance->syncRoles(['admin_finance']);
+        $staff = User::factory()->create();
+        $category = ExpenseCategory::firstOrFail();
+
+        $selectedRecords = collect(['PMEXP-BULK-001', 'PMEXP-BULK-002'])
+            ->map(fn (string $reference) => ExpenseRecord::create([
+                'user_id' => $staff->id,
+                'expense_category_id' => $category->id,
+                'claim_reference_no' => $reference,
+                'record_type' => ExpenseRecord::TYPE_CLAIMABLE,
+                'merchant_name' => 'Bulk Status Merchant',
+                'receipt_date' => '2026-07-17',
+                'currency' => 'MYR',
+                'total_amount' => '30.00',
+                'status' => 'pending_review',
+            ]));
+        $unselectedRecord = ExpenseRecord::create([
+            'user_id' => $staff->id,
+            'expense_category_id' => $category->id,
+            'claim_reference_no' => 'PMEXP-BULK-003',
+            'record_type' => ExpenseRecord::TYPE_CLAIMABLE,
+            'merchant_name' => 'Unselected Merchant',
+            'receipt_date' => '2026-07-17',
+            'currency' => 'MYR',
+            'total_amount' => '40.00',
+            'status' => 'pending_review',
+        ]);
+
+        $this->actingAs($finance)
+            ->get('/reports')
+            ->assertOk()
+            ->assertSee('Change selected status')
+            ->assertSee('name="record_ids[]"', false);
+
+        $this->actingAs($finance)
+            ->patch('/reports/bulk-status', [
+                'record_ids' => $selectedRecords->pluck('id')->all(),
+                'status' => 'approved',
+            ])
+            ->assertRedirect();
+
+        foreach ($selectedRecords as $record) {
+            $this->assertDatabaseHas('expense_records', [
+                'id' => $record->id,
+                'status' => 'approved',
+            ]);
+            $this->assertDatabaseHas('audit_logs', [
+                'user_id' => $finance->id,
+                'action' => 'bulk_status_changed',
+                'module' => 'expense_records',
+                'record_id' => $record->id,
+            ]);
+        }
+        $this->assertDatabaseHas('expense_records', [
+            'id' => $unselectedRecord->id,
+            'status' => 'pending_review',
+        ]);
     }
 
     public function test_director_can_export_native_xlsx_report(): void

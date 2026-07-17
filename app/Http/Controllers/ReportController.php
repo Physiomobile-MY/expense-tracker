@@ -2,14 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
 use App\Models\Department;
 use App\Models\ExpenseCategory;
 use App\Models\ExpenseRecord;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\StreamedResponse;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use ZipArchive;
@@ -33,7 +38,66 @@ class ReportController extends Controller
             'departments' => Department::where('status', 'active')->orderBy('name')->get(),
             'categories' => ExpenseCategory::where('status', 'active')->orderBy('name')->get(),
             'staff' => User::where('status', 'active')->orderBy('name')->get(),
+            'bulkStatuses' => array_merge(
+                config('expenseflow.claimable_statuses'),
+                config('expenseflow.non_claimable_statuses'),
+            ),
         ]);
+    }
+
+    public function bulkStatus(Request $request): RedirectResponse
+    {
+        abort_unless($request->user()->canManageExpenses(), 403);
+
+        $statuses = array_merge(
+            config('expenseflow.claimable_statuses'),
+            config('expenseflow.non_claimable_statuses'),
+        );
+        $validated = $request->validate([
+            'record_ids' => ['required', 'array', 'min:1'],
+            'record_ids.*' => ['integer', 'distinct', 'exists:expense_records,id'],
+            'status' => ['required', Rule::in(array_keys($statuses))],
+        ]);
+
+        $records = ExpenseRecord::whereKey($validated['record_ids'])->get();
+        $incompatible = $records->filter(function (ExpenseRecord $record) use ($validated): bool {
+            $allowed = $record->record_type === ExpenseRecord::TYPE_NON_CLAIMABLE
+                ? config('expenseflow.non_claimable_statuses')
+                : config('expenseflow.claimable_statuses');
+
+            return ! array_key_exists($validated['status'], $allowed);
+        });
+
+        if ($incompatible->isNotEmpty()) {
+            throw ValidationException::withMessages([
+                'status' => 'The selected status is not valid for every selected record.',
+            ]);
+        }
+
+        DB::transaction(function () use ($records, $request, $validated): void {
+            foreach ($records as $record) {
+                $previousStatus = $record->status;
+
+                if ($previousStatus === $validated['status']) {
+                    continue;
+                }
+
+                $record->forceFill(['status' => $validated['status']])->save();
+
+                AuditLog::create([
+                    'user_id' => $request->user()->id,
+                    'action' => 'bulk_status_changed',
+                    'module' => 'expense_records',
+                    'record_id' => $record->id,
+                    'old_values' => ['status' => $previousStatus],
+                    'new_values' => ['status' => $validated['status']],
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                ]);
+            }
+        });
+
+        return back()->with('status', $records->count().' expense record(s) updated.');
     }
 
     public function export(Request $request): BinaryFileResponse|StreamedResponse

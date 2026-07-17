@@ -1,25 +1,25 @@
 <?php
 
 use App\Http\Controllers\Admin\AIExtractionLogController;
-use App\Http\Controllers\Admin\ImpersonationController;
 use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\DepartmentController;
+use App\Http\Controllers\Admin\ImpersonationController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\ForgotPasswordController;
-use App\Http\Controllers\ResetPasswordController;
 use App\Http\Controllers\CccController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExpenseRecordController;
 use App\Http\Controllers\ExpenseWorkflowController;
+use App\Http\Controllers\ForgotPasswordController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PasswordChangeController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReceiptFileController;
 use App\Http\Controllers\ReceiptUploadController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ResetPasswordController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function (): void {
@@ -72,6 +72,7 @@ Route::middleware(['auth', 'password.changed'])->group(function (): void {
 
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
     Route::get('/reports/export', [ReportController::class, 'export'])->name('reports.export');
+    Route::patch('/reports/bulk-status', [ReportController::class, 'bulkStatus'])->name('reports.bulk-status');
 
     Route::prefix('ccc')->name('ccc.')->group(function (): void {
         Route::get('/', [CccController::class, 'dashboard'])->name('dashboard');

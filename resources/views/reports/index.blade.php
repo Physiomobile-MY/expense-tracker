@@ -92,28 +92,61 @@
     </div>
 </div>
 
-<section class="pm-card overflow-hidden">
-    <div class="divide-y divide-gray-100">
-        @forelse ($records as $record)
-            <a href="{{ route('records.show', $record) }}" class="block px-4 py-4 hover:bg-gray-50">
-                <div class="flex items-start justify-between gap-4">
-                    <div class="min-w-0">
-                        <p class="font-bold text-gray-950">{{ $record->claim_reference_no ?: 'Draft Receipt' }}</p>
-                        <p class="mt-1 truncate text-sm text-gray-600">{{ $record->merchant_name ?: '-' }} · {{ $record->user?->name }}</p>
-                        <p class="mt-1 text-xs text-gray-500">{{ $record->department?->name ?: 'No Department' }} · {{ $record->claimExpenseTypeLabel() }} · {{ $record->category?->name ?: 'No Category' }}</p>
-                    </div>
-                    <div class="shrink-0 text-right">
-                        <p class="font-bold text-gray-950">MYR {{ number_format((float) $record->total_amount, 2) }}</p>
-                        @include('partials.status-badge', ['status' => $record->status, 'label' => $record->statusLabel()])
-                    </div>
+<form method="POST" action="{{ route('reports.bulk-status') }}">
+    @csrf
+    @method('PATCH')
+    <section class="pm-card overflow-hidden">
+        <div class="flex flex-col gap-3 border-b border-gray-100 bg-gray-50 p-4 sm:flex-row sm:items-end">
+            <div class="flex-1">
+                <label class="pm-label" for="bulk_status">Change selected status</label>
+                <select class="pm-input" id="bulk_status" name="status" required>
+                    <option value="">Choose status</option>
+                    @foreach ($bulkStatuses as $value => $label)
+                        <option value="{{ $value }}">{{ $label }}</option>
+                    @endforeach
+                </select>
+                @error('status')
+                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                @enderror
+                @error('record_ids')
+                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                @enderror
+            </div>
+            <button class="pm-btn-primary" type="submit">Update Selected</button>
+        </div>
+        <div class="divide-y divide-gray-100">
+            @forelse ($records as $record)
+                <div class="flex items-stretch">
+                    <label class="flex cursor-pointer items-center px-4" title="Select {{ $record->claim_reference_no ?: 'record #'.$record->id }}">
+                        <input
+                            class="size-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                            type="checkbox"
+                            name="record_ids[]"
+                            value="{{ $record->id }}"
+                            aria-label="Select {{ $record->claim_reference_no ?: 'record #'.$record->id }}"
+                        >
+                    </label>
+                    <a href="{{ route('records.show', $record) }}" class="block flex-1 px-4 py-4 hover:bg-gray-50">
+                        <div class="flex items-start justify-between gap-4">
+                            <div class="min-w-0">
+                                <p class="font-bold text-gray-950">{{ $record->claim_reference_no ?: 'Draft Receipt' }}</p>
+                                <p class="mt-1 truncate text-sm text-gray-600">{{ $record->merchant_name ?: '-' }} · {{ $record->user?->name }}</p>
+                                <p class="mt-1 text-xs text-gray-500">{{ $record->department?->name ?: 'No Department' }} · {{ $record->claimExpenseTypeLabel() }} · {{ $record->category?->name ?: 'No Category' }}</p>
+                            </div>
+                            <div class="shrink-0 text-right">
+                                <p class="font-bold text-gray-950">MYR {{ number_format((float) $record->total_amount, 2) }}</p>
+                                @include('partials.status-badge', ['status' => $record->status, 'label' => $record->statusLabel()])
+                            </div>
+                        </div>
+                    </a>
                 </div>
-            </a>
-        @empty
-            <div class="px-4 py-10 text-center text-sm text-gray-500">No records match the filters.</div>
-        @endforelse
-    </div>
-    <div class="border-t border-gray-100 px-4 py-3">
-        {{ $records->links() }}
-    </div>
-</section>
+            @empty
+                <div class="px-4 py-10 text-center text-sm text-gray-500">No records match the filters.</div>
+            @endforelse
+        </div>
+        <div class="border-t border-gray-100 px-4 py-3">
+            {{ $records->links() }}
+        </div>
+    </section>
+</form>
 @endsection
