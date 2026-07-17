@@ -236,6 +236,25 @@ class ExampleTest extends TestCase
             ->assertDontSee('Other Staff Merchant');
     }
 
+    public function test_expense_records_staff_filter_includes_director_accounts(): void
+    {
+        $this->withoutVite();
+        $this->seed();
+
+        $nidzam = User::where('email', 'nidzamyatimi@physiomobile.com')->firstOrFail();
+        $saiful = User::where('email', 'saiful@physiomobile.com')->firstOrFail();
+        $nidzam->forceFill(['must_change_password' => false])->save();
+
+        $this->actingAs($nidzam)
+            ->get('/records')
+            ->assertOk()
+            ->assertSee('Nama Staff')
+            ->assertSee('<option value="'.$nidzam->id.'"', false)
+            ->assertSee('Nidzam Yatimi')
+            ->assertSee('<option value="'.$saiful->id.'"', false)
+            ->assertSee('Saiful');
+    }
+
     public function test_director_upload_stays_draft_for_review_when_ai_is_not_configured(): void
     {
         $this->seed();

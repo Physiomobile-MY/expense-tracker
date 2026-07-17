@@ -38,11 +38,7 @@ class ExpenseRecordController extends Controller
             'records' => $records,
             'departments' => Department::where('status', 'active')->orderBy('name')->get(),
             'categories' => ExpenseCategory::where('status', 'active')->orderBy('name')->get(),
-            'staff' => User::query()
-                ->where('status', 'active')
-                ->whereIn('role', ['staff', 'executive'])
-                ->orderBy('name')
-                ->get(),
+            'staff' => User::where('status', 'active')->orderBy('name')->get(),
             'statuses' => array_merge(config('expenseflow.claimable_statuses'), config('expenseflow.non_claimable_statuses')),
         ]);
     }
