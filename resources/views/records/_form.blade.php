@@ -101,9 +101,9 @@
                                 </select>
                             </div>
                             <div>
-                                <label class="pm-label" for="attach_receipt">File</label>
-                                <input class="pm-input file:mr-2 file:rounded file:border-0 file:bg-[#FDECEC] file:px-2 file:py-1 file:text-xs file:font-semibold file:text-[#A80F16]" id="attach_receipt" name="receipt" type="file" accept=".jpg,.jpeg,.png,.heic,.heif,.pdf,image/jpeg,image/png,image/heic,image/heif,application/pdf" form="receipt-attach-form" required>
-                                <p class="mt-1 text-xs text-gray-400">Max 10 MB. AI will re-scan and update categorization.</p>
+                                <label class="pm-label" for="attach_receipt">Files</label>
+                                <input class="pm-input file:mr-2 file:rounded file:border-0 file:bg-[#FDECEC] file:px-2 file:py-1 file:text-xs file:font-semibold file:text-[#A80F16]" id="attach_receipt" name="receipts[]" type="file" accept=".jpg,.jpeg,.png,.heic,.heif,.pdf,image/jpeg,image/png,image/heic,image/heif,application/pdf" form="receipt-attach-form" multiple required>
+                                <p class="mt-1 text-xs text-gray-400">Max 10 MB each. Select multiple screenshots/receipts to attach and scan them together.</p>
                             </div>
                             <button class="pm-btn-primary w-full py-2 text-sm" type="submit" form="receipt-attach-form" data-attach-submit>
                                 <span data-attach-text>Attach & Scan</span>

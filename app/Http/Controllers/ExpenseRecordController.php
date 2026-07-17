@@ -143,19 +143,27 @@ class ExpenseRecordController extends Controller
         }
 
         $validated = $request->validate([
-            'receipt' => ['required', 'file', 'mimes:jpg,jpeg,png,heic,heif,pdf', 'max:10240'],
+            'receipt' => ['nullable', 'file', 'mimes:jpg,jpeg,png,heic,heif,pdf', 'max:10240'],
+            'receipts' => ['nullable', 'array', 'min:1', 'max:10', 'required_without:receipt'],
+            'receipts.*' => ['required', 'file', 'mimes:jpg,jpeg,png,heic,heif,pdf', 'max:10240'],
             'document_type' => ['required', Rule::in(ExpenseReceipt::documentTypes())],
         ], [], [
             'receipt' => 'receipt file',
+            'receipts' => 'receipt files',
+            'receipts.*' => 'receipt file',
             'document_type' => 'document type',
         ]);
 
         $documentType = ExpenseReceipt::normalizeDocumentType($validated['document_type']);
 
-        $records->attachReceipt($record, $request->user(), $validated['receipt'], $documentType);
-        ProcessReceiptExtractionJob::dispatchSync($record->id);
+        $files = $request->file('receipts') ?: [$validated['receipt']];
 
-        return back()->with('status', 'Receipt attached and scanned. Categorization updated below.');
+        foreach ($files as $file) {
+            $receipt = $records->attachReceipt($record, $request->user(), $file, $documentType);
+            ProcessReceiptExtractionJob::dispatchSync($record->id, $receipt->id);
+        }
+
+        return back()->with('status', count($files).' receipt'.(count($files) === 1 ? '' : 's').' attached and scanned. Categorization updated below.');
     }
 
     public function updateReceipt(Request $request, ExpenseRecord $record, ExpenseReceipt $receipt): RedirectResponse

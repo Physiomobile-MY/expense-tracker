@@ -383,7 +383,7 @@ class ExampleTest extends TestCase
             ->post('/upload', [
                 'document_type' => 'google_maps_screenshot',
                 'receipts' => [
-                    UploadedFile::fake()->image('google-maps-route.jpg'),
+                    UploadedFile::fake()->create('google-maps-route.jpg', 120, 'image/jpeg'),
                 ],
             ])
             ->assertRedirect();
@@ -540,7 +540,7 @@ class ExampleTest extends TestCase
         $this->actingAs($user)
             ->post('/records/'.$record->id.'/receipts', [
                 'document_type' => 'waze_screenshot',
-                'receipt' => UploadedFile::fake()->image('waze-route.jpg'),
+                'receipt' => UploadedFile::fake()->create('waze-route.jpg', 120, 'image/jpeg'),
             ])
             ->assertRedirect();
 
@@ -549,6 +549,46 @@ class ExampleTest extends TestCase
         $this->assertSame('waze_screenshot', $receipt->document_type);
         $this->assertStringStartsWith('route-screenshots/', $receipt->file_path);
         Storage::disk('local')->assertExists($receipt->file_path);
+    }
+
+    public function test_multiple_route_screenshots_can_be_attached_and_each_is_scanned(): void
+    {
+        $this->seed();
+        Storage::fake('local');
+
+        $user = User::where('email', 'nidzamyatimi@physiomobile.com')->first();
+        $user->forceFill(['must_change_password' => false])->save();
+
+        $record = ExpenseRecord::create([
+            'user_id' => $user->id,
+            'department_id' => $user->department_id,
+            'status' => 'draft',
+            'currency' => 'MYR',
+            'claim_expense_type' => 'receipt',
+        ]);
+
+        $this->actingAs($user)
+            ->post('/records/'.$record->id.'/receipts', [
+                'document_type' => 'waze_screenshot',
+                'receipts' => [
+                    UploadedFile::fake()->create('waze-route-one.jpg', 120, 'image/jpeg'),
+                    UploadedFile::fake()->create('waze-route-two.jpg', 120, 'image/jpeg'),
+                ],
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseCount('expense_receipts', 2);
+        $this->assertDatabaseHas('expense_receipts', [
+            'expense_record_id' => $record->id,
+            'document_type' => 'waze_screenshot',
+            'original_filename' => 'waze-route-one.jpg',
+        ]);
+        $this->assertDatabaseHas('expense_receipts', [
+            'expense_record_id' => $record->id,
+            'document_type' => 'waze_screenshot',
+            'original_filename' => 'waze-route-two.jpg',
+        ]);
+        $this->assertDatabaseCount('ai_extraction_logs', 2);
     }
 
     public function test_director_can_export_native_xlsx_report(): void
