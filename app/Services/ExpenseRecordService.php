@@ -331,7 +331,7 @@ class ExpenseRecordService
 
     private function createReceiptFromUpload(ExpenseRecord $record, User $user, UploadedFile $file, string $documentType): ExpenseReceipt
     {
-        $path = Storage::putFile($this->receiptStorageDirectory($documentType).'/'.now()->format('Y/m'), $file);
+        $path = Storage::disk($this->receiptDisk())->putFile($this->receiptStorageDirectory($documentType).'/'.now()->format('Y/m'), $file);
 
         return ExpenseReceipt::create([
             'expense_record_id' => $record->id,
@@ -342,6 +342,11 @@ class ExpenseRecordService
             'uploaded_by' => $user->id,
             'document_type' => $documentType,
         ]);
+    }
+
+    private function receiptDisk(): string
+    {
+        return (string) config('expenseflow.receipt_disk', 'receipts');
     }
 
     private function receiptStorageDirectory(string $documentType): string

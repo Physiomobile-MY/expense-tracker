@@ -16,7 +16,7 @@ class AuthorizationHardeningTest extends TestCase
     public function test_unrelated_staff_cannot_download_receipt_and_missing_file_returns_404_without_path_leak(): void
     {
         $this->seed();
-        Storage::fake('local');
+        Storage::fake('receipts');
 
         [$owner, $other] = $this->staffUsers();
         $receipt = $this->receiptFor($owner, 'receipts/private-owner.pdf');
@@ -33,13 +33,13 @@ class AuthorizationHardeningTest extends TestCase
     public function test_privileged_receipt_download_is_audited(): void
     {
         $this->seed();
-        Storage::fake('local');
+        Storage::fake('receipts');
 
         [$owner] = $this->staffUsers();
         $director = User::where('role', 'director_super_admin')->firstOrFail();
         $director->forceFill(['must_change_password' => false])->save();
         $receipt = $this->receiptFor($owner, 'receipts/private-director.pdf');
-        Storage::put($receipt->file_path, 'redacted-test-receipt');
+        Storage::disk('receipts')->put($receipt->file_path, 'redacted-test-receipt');
 
         $this->actingAs($director)
             ->get(route('receipts.file', $receipt))

@@ -32,13 +32,22 @@ class ProcessReceiptExtractionJob implements ShouldQueue
             try {
                 $result = $extractor->extract($receipt);
 
+                if ($result['skipped'] ?? false) {
+                    AIExtractionLog::create([
+                        'expense_record_id' => $record->id,
+                        'provider' => 'openai',
+                        'model' => config('services.openai.receipt_model'),
+                        'status' => 'skipped',
+                        'error_message' => 'AI receipt extraction unavailable; manual entry required.',
+                    ]);
+
+                    continue;
+                }
+
                 AIExtractionLog::create([
                     'expense_record_id' => $record->id,
                     'provider' => 'openai',
                     'model' => $result['model'] ?? config('services.openai.receipt_model'),
-                    'prompt' => $result['prompt'],
-                    'raw_response' => json_encode($result['raw_response']),
-                    'extracted_json' => $result['extracted_json'],
                     'confidence_score' => $result['confidence_score'],
                     'status' => 'completed',
                     'token_usage_input' => $result['token_usage_input'],
@@ -51,9 +60,8 @@ class ProcessReceiptExtractionJob implements ShouldQueue
                     'expense_record_id' => $record->id,
                     'provider' => 'openai',
                     'model' => config('services.openai.receipt_model'),
-                    'prompt' => config('expenseflow.receipt_prompt'),
                     'status' => 'failed',
-                    'error_message' => $exception->getMessage(),
+                    'error_message' => str($exception->getMessage())->limit(255)->toString(),
                 ]);
             }
         }

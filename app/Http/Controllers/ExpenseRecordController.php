@@ -183,7 +183,7 @@ class ExpenseRecordController extends Controller
         abort_if($receipt->expense_record_id !== $record->id, 404);
         abort_unless($record->canBeEditedBy($request->user()), 403);
 
-        Storage::delete($receipt->file_path);
+        Storage::disk((string) config('expenseflow.receipt_disk', 'receipts'))->delete($receipt->file_path);
         $receipt->delete();
 
         return back()->with('status', 'Receipt removed.');

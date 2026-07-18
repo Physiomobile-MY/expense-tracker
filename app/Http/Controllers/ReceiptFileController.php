@@ -14,7 +14,8 @@ class ReceiptFileController extends Controller
     {
         $record = $expenseReceipt->expenseRecord;
         abort_unless($request->user()->canManageExpenses() || $record->user_id === $request->user()->id, 403);
-        abort_unless(Storage::exists($expenseReceipt->file_path), 404);
+        $disk = Storage::disk((string) config('expenseflow.receipt_disk', 'receipts'));
+        abort_unless($disk->exists($expenseReceipt->file_path), 404);
 
         if ($request->user()->canManageExpenses() && $record->user_id !== $request->user()->id) {
             AuditLog::create([
@@ -31,6 +32,6 @@ class ReceiptFileController extends Controller
             ]);
         }
 
-        return Storage::response($expenseReceipt->file_path, $expenseReceipt->original_filename);
+        return $disk->response($expenseReceipt->file_path, $expenseReceipt->original_filename);
     }
 }

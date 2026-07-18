@@ -1,6 +1,9 @@
 <?php
 
 return [
+
+    'receipt_disk' => env('RECEIPT_FILESYSTEM_DISK', 'receipts'),
+
     'brand' => [
         'name' => 'Physiomobile ExpenseFlow',
         'tagline' => 'Physiomobile - Enriching Quality of Life',

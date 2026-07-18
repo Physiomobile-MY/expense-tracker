@@ -260,7 +260,7 @@ class ExampleTest extends TestCase
     public function test_director_upload_stays_draft_for_review_when_ai_is_not_configured(): void
     {
         $this->seed();
-        Storage::fake('local');
+        Storage::fake('receipts');
         Mail::fake();
 
         $user = User::where('email', 'director.one@example.test')->first();
@@ -281,7 +281,7 @@ class ExampleTest extends TestCase
         $this->assertDatabaseCount('expense_receipts', 1);
         $receipt = ExpenseReceipt::first();
         $this->assertStringStartsWith('receipts/', $receipt->file_path);
-        $this->assertDatabaseHas('ai_extraction_logs', ['status' => 'failed']);
+        $this->assertDatabaseHas('ai_extraction_logs', ['status' => 'skipped']);
         $this->assertSame('draft', $record->status);
         $this->assertNull($record->record_type);
         $this->assertNull($record->claim_reference_no);
@@ -298,7 +298,7 @@ class ExampleTest extends TestCase
     public function test_director_can_upload_heic_receipt(): void
     {
         $this->seed();
-        Storage::fake('local');
+        Storage::fake('receipts');
         Mail::fake();
 
         $user = User::where('email', 'director.one@example.test')->first();
@@ -326,7 +326,7 @@ class ExampleTest extends TestCase
     public function test_both_seeded_directors_upload_receipts_as_drafts(): void
     {
         $this->seed();
-        Storage::fake('local');
+        Storage::fake('receipts');
         Mail::fake();
 
         foreach (['director.one@example.test', 'director.two@example.test'] as $index => $email) {
@@ -402,7 +402,7 @@ class ExampleTest extends TestCase
     {
         $this->withoutVite();
         $this->seed();
-        Storage::fake('local');
+        Storage::fake('receipts');
 
         $user = User::where('email', 'director.one@example.test')->first();
         $user->forceFill(['must_change_password' => false])->save();
@@ -552,7 +552,7 @@ class ExampleTest extends TestCase
     public function test_route_screenshot_can_be_attached_to_existing_draft(): void
     {
         $this->seed();
-        Storage::fake('local');
+        Storage::fake('receipts');
 
         $user = User::where('email', 'director.one@example.test')->first();
         $user->forceFill(['must_change_password' => false])->save();
@@ -576,13 +576,13 @@ class ExampleTest extends TestCase
 
         $this->assertSame('waze_screenshot', $receipt->document_type);
         $this->assertStringStartsWith('route-screenshots/', $receipt->file_path);
-        Storage::disk('local')->assertExists($receipt->file_path);
+        Storage::disk('receipts')->assertExists($receipt->file_path);
     }
 
     public function test_multiple_route_screenshots_can_be_attached_and_each_is_scanned(): void
     {
         $this->seed();
-        Storage::fake('local');
+        Storage::fake('receipts');
 
         $user = User::where('email', 'director.one@example.test')->first();
         $user->forceFill(['must_change_password' => false])->save();
@@ -855,7 +855,7 @@ class ExampleTest extends TestCase
     public function test_clear_records_command_deletes_expense_test_data_only(): void
     {
         $this->seed();
-        Storage::fake('local');
+        Storage::fake('receipts');
 
         $user = User::where('email', 'director.one@example.test')->first();
         $path = 'receipts/2026/05/test.pdf';

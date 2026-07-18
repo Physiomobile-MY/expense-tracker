@@ -14,20 +14,20 @@ class OpenAIReceiptExtractionService
     public function extract(ExpenseReceipt $receipt): array
     {
         if (! $this->enabled()) {
-            throw new RuntimeException('AI receipt extraction is disabled.');
+            return ['skipped' => true, 'skip_reason' => 'disabled'];
         }
 
         $apiKey = config('services.openai.key');
 
         if (! $apiKey) {
-            throw new RuntimeException('OpenAI API key is not configured.');
+            return ['skipped' => true, 'skip_reason' => 'missing_api_key'];
         }
 
         if ($this->dailyLimitReached()) {
             throw new RuntimeException('Daily AI receipt scan limit reached.');
         }
 
-        $path = Storage::path($receipt->file_path);
+        $path = Storage::disk($this->receiptDisk())->path($receipt->file_path);
 
         if (! is_file($path)) {
             throw new RuntimeException('Receipt file is missing from storage.');
@@ -118,6 +118,11 @@ class OpenAIReceiptExtractionService
             'image_url' => 'data:'.$receipt->file_type.';base64,'.$base64,
             'detail' => 'high',
         ];
+    }
+
+    private function receiptDisk(): string
+    {
+        return (string) config('expenseflow.receipt_disk', 'receipts');
     }
 
     private function enabled(): bool
