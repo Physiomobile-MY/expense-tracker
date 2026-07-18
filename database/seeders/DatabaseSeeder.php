@@ -2,14 +2,15 @@
 
 namespace Database\Seeders;
 
+use App\Models\BankAccount;
 use App\Models\Department;
 use App\Models\ExpenseCategory;
-use App\Models\BankAccount;
 use App\Models\SystemSetting;
 use App\Models\TransactionCategory;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -98,32 +99,35 @@ class DatabaseSeeder extends Seeder
 
         $management = Department::where('code', 'MGT')->first();
 
-        $users = [
-            [
-                'name' => 'Nidzam Yatimi',
-                'email' => 'nidzamyatimi@physiomobile.com',
-                'role' => 'director_super_admin',
-                'department_id' => $management?->id,
-            ],
-            [
-                'name' => 'Saiful',
-                'email' => 'saiful@physiomobile.com',
-                'role' => 'director_super_admin',
-                'department_id' => $management?->id,
-            ],
-        ];
+        if (app()->environment(['local', 'testing'])) {
+            $users = [
+                [
+                    'name' => 'Demo Director One',
+                    'email' => 'director.one@example.test',
+                    'role' => 'director_super_admin',
+                    'department_id' => $management?->id,
+                ],
+                [
+                    'name' => 'Demo Director Two',
+                    'email' => 'director.two@example.test',
+                    'role' => 'director_super_admin',
+                    'department_id' => $management?->id,
+                ],
+            ];
 
-        foreach ($users as $userData) {
-            $user = User::updateOrCreate(
-                ['email' => $userData['email']],
-                $userData + [
-                    'status' => 'active',
-                    'must_change_password' => true,
-                    'password' => Hash::make('password'),
-                ]
-            );
+            foreach ($users as $userData) {
+                $user = User::updateOrCreate(
+                    ['email' => $userData['email']],
+                    $userData + [
+                        'status' => 'active',
+                        'must_change_password' => true,
+                        'password' => Hash::make(Str::password(32)),
+                        'remember_token' => null,
+                    ]
+                );
 
-            $user->syncRoles([$userData['role']]);
+                $user->syncRoles([$userData['role']]);
+            }
         }
 
         User::whereIn('email', [

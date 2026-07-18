@@ -41,6 +41,8 @@ class UserController extends Controller
         ]);
 
         $validated['password'] = Hash::make($validated['password']);
+        $validated['must_change_password'] = true;
+        $validated['remember_token'] = null;
         $this->ensureConfiguredRole($validated['role']);
 
         $user = User::create($validated);
@@ -64,6 +66,8 @@ class UserController extends Controller
 
         if ($validated['password'] ?? null) {
             $validated['password'] = Hash::make($validated['password']);
+            $validated['must_change_password'] = true;
+            $validated['remember_token'] = null;
         } else {
             unset($validated['password']);
         }

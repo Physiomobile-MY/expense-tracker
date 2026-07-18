@@ -18,7 +18,7 @@ class CashflowCommandCentreTest extends TestCase
         $this->withoutVite();
         $this->seed();
 
-        $director = User::where('email', 'nidzamyatimi@physiomobile.com')->first();
+        $director = User::where('email', 'director.one@example.test')->first();
         $director->forceFill(['must_change_password' => false])->save();
 
         $this->actingAs($director)
@@ -50,7 +50,7 @@ class CashflowCommandCentreTest extends TestCase
         $this->withoutVite();
         $this->seed();
 
-        $director = User::where('email', 'nidzamyatimi@physiomobile.com')->first();
+        $director = User::where('email', 'director.one@example.test')->first();
         $director->forceFill(['must_change_password' => false])->save();
 
         $this->actingAs($director)

@@ -15,13 +15,7 @@ Reports export to CSV, native XLSX, and PDF.
 
 ## MySQL Setup
 
-Create the database from the included SQL file:
-
-```bash
-mysql -u root -p < database/sql/physiomobile_expenseflow_mysql.sql
-```
-
-Then configure `.env`:
+Create an empty database, then configure `.env`:
 
 ```env
 APP_NAME="Physiomobile ExpenseFlow"
@@ -29,7 +23,7 @@ DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
 DB_DATABASE=physiomobile_expenseflow
-DB_USERNAME=root
+DB_USERNAME=expenseflow_app
 DB_PASSWORD=
 
 OPENAI_API_KEY=
@@ -40,28 +34,24 @@ FINANCE_APPROVAL_EMAIL=finance.hq@physiomobile.com
 APP_THEME_PRIMARY="#D71920"
 ```
 
-The SQL file includes the MVP schema, departments, expense categories, roles, permissions, OpenAI settings, and the two initial Director Super Admin accounts.
+Run migrations and seed catalog data:
 
-## Initial Director Accounts
-
-Both initial accounts use temporary password:
-
-```text
-password
+```bash
+php artisan migrate --force
+php artisan db:seed --force
 ```
 
-Users must change this password after first login.
-
-- `nidzamyatimi@physiomobile.com`
-- `saiful@physiomobile.com`
+The public repository must not contain SQL dumps, real staff accounts, password hashes, tokens, receipt data, or production settings. Bootstrap director/admin users with environment-specific credentials only. Do not use shared or documented default passwords.
 
 Directors can create staff-level Executive users in **Administration > Users** by choosing the `Executive` role. Executive users have the same claim upload and own-record workflow as staff, but can only see their own expense data.
 
-To reset these accounts on an existing deployment:
+To create safe local-only demo director users, explicitly generate one-time temporary credentials:
 
 ```bash
-php artisan expenseflow:ensure-demo-users
+php artisan expenseflow:ensure-demo-users --generate --force
 ```
+
+Do not run demo/bootstrap commands on production unless a maintainer has approved the deployment-specific rotation and audit checklist.
 
 To create or repair the default departments and expense categories:
 
@@ -111,15 +101,8 @@ php artisan expenseflow:clear-records --force
 composer install
 npm install
 php artisan key:generate
-php artisan storage:link
 npm run build
 php artisan serve
-```
-
-If you prefer Laravel migrations instead of importing SQL:
-
-```bash
-php artisan migrate:fresh --seed
 ```
 
 ## Validation

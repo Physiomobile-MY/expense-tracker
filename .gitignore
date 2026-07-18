@@ -26,3 +26,7 @@ _ide_helper.php
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Keep database dumps and exports out of the public repository.
+database/sql/*.sql
+!database/sql/.gitkeep

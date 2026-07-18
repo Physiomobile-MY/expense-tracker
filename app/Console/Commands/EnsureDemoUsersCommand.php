@@ -6,21 +6,44 @@ use App\Models\Department;
 use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
 class EnsureDemoUsersCommand extends Command
 {
-    protected $signature = 'expenseflow:ensure-demo-users {--password=password}';
+    protected $signature = 'expenseflow:ensure-demo-users {--password=} {--generate : Generate one-time passwords for each demo user} {--force : Confirm this local/testing bootstrap action} {--reactivate : Reactivate existing inactive demo users}';
 
-    protected $description = 'Create or reset the default Physiomobile ExpenseFlow director users and roles.';
+    protected $description = 'Create local/testing ExpenseFlow demo director users with deployment-specific credentials.';
 
     public function handle(): int
     {
-        $password = (string) $this->option('password');
+        if (! $this->option('force')) {
+            $this->error('Refusing to create or reset privileged demo users without --force.');
 
-        if (strlen($password) < 8) {
-            $this->error('Password must be at least 8 characters.');
+            return self::FAILURE;
+        }
+
+        if (app()->environment('production')) {
+            $this->error('Refusing to run demo user bootstrap in production. Use a deployment-specific admin invitation/reset process instead.');
+
+            return self::FAILURE;
+        }
+
+        $sharedPassword = $this->option('password');
+
+        if ($sharedPassword && ! $this->option('generate')) {
+            $this->warn('A shared credential was provided. Prefer --generate for one-time per-user credentials.');
+
+            if (strlen((string) $sharedPassword) < 14) {
+                $this->error('Bootstrap credentials must be at least 14 characters.');
+
+                return self::FAILURE;
+            }
+        }
+
+        if (! $sharedPassword && ! $this->option('generate')) {
+            $this->error('Provide --generate or a deployment-specific --password value.');
 
             return self::FAILURE;
         }
@@ -82,14 +105,14 @@ class EnsureDemoUsersCommand extends Command
 
         $users = [
             [
-                'name' => 'Nidzam Yatimi',
-                'email' => 'nidzamyatimi@physiomobile.com',
+                'name' => 'Demo Director One',
+                'email' => 'director.one@example.test',
                 'role' => 'director_super_admin',
                 'department_code' => 'MGT',
             ],
             [
-                'name' => 'Saiful',
-                'email' => 'saiful@physiomobile.com',
+                'name' => 'Demo Director Two',
+                'email' => 'director.two@example.test',
                 'role' => 'director_super_admin',
                 'department_code' => 'MGT',
             ],
@@ -97,6 +120,15 @@ class EnsureDemoUsersCommand extends Command
 
         foreach ($users as $userData) {
             $department = Department::where('code', $userData['department_code'])->first();
+
+            $password = $this->option('generate') ? Str::password(24) : (string) $sharedPassword;
+            $existing = User::where('email', $userData['email'])->first();
+
+            if ($existing?->status === 'inactive' && ! $this->option('reactivate')) {
+                $this->warn($userData['email'].' exists but is inactive; skipping without --reactivate.');
+
+                continue;
+            }
 
             $user = User::updateOrCreate(
                 ['email' => $userData['email']],
@@ -107,11 +139,12 @@ class EnsureDemoUsersCommand extends Command
                     'status' => 'active',
                     'must_change_password' => true,
                     'password' => Hash::make($password),
+                    'remember_token' => null,
                 ]
             );
 
             $user->syncRoles([$userData['role']]);
-            $this->line($userData['email'].' reset.');
+            $this->line($userData['email'].' ready. One-time password: '.$password);
         }
 
         User::whereIn('email', [
@@ -120,8 +153,7 @@ class EnsureDemoUsersCommand extends Command
             'staff@physiomobile.com',
         ])->update(['status' => 'inactive']);
 
-        $this->info('Director users and roles are ready. Temporary password: '.$password);
-        $this->info('Users must change password after first login.');
+        $this->info('Demo director users are ready. Store generated one-time passwords securely and rotate immediately after first login.');
 
         return self::SUCCESS;
     }
