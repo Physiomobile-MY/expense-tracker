@@ -14,6 +14,8 @@ class ImpersonationController extends Controller
         abort_unless($request->user()->isDirector(), 403);
         abort_if($user->isDirector(), 403, 'Cannot impersonate another director.');
         abort_if($request->user()->id === $user->id, 403, 'Cannot impersonate yourself.');
+        abort_unless($user->status === 'active', 403, 'Cannot impersonate an inactive user.');
+        abort_if($user->must_change_password, 403, 'Cannot impersonate a user who must change password.');
         abort_if($request->session()->has('impersonating_user_id'), 403, 'Already impersonating a user.');
 
         $request->session()->put('impersonator_id', $request->user()->id);

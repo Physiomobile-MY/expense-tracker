@@ -166,6 +166,7 @@ class ExpenseRecordController extends Controller
     {
         $this->authorizeVisible($request, $record);
         abort_if($receipt->expense_record_id !== $record->id, 404);
+        abort_unless($record->canBeEditedBy($request->user()), 403);
 
         $validated = $request->validate([
             'document_type' => ['required', Rule::in(ExpenseReceipt::documentTypes())],
@@ -180,6 +181,7 @@ class ExpenseRecordController extends Controller
     {
         $this->authorizeVisible($request, $record);
         abort_if($receipt->expense_record_id !== $record->id, 404);
+        abort_unless($record->canBeEditedBy($request->user()), 403);
 
         Storage::delete($receipt->file_path);
         $receipt->delete();
