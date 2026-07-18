@@ -97,7 +97,7 @@ class ExpenseRecordController extends Controller
         return redirect()->route('records.show', $record)->with('status', 'Expense record submitted.');
     }
 
-    public function comment(Request $request, ExpenseRecord $record): RedirectResponse
+    public function comment(Request $request, ExpenseRecord $record, ExpenseRecordService $records): RedirectResponse
     {
         $this->authorizeVisible($request, $record);
 
@@ -111,10 +111,7 @@ class ExpenseRecordController extends Controller
         ]);
 
         if ($record->user_id === $request->user()->id && $record->status === 'need_clarification') {
-            $record->forceFill([
-                'status' => 'pending_review',
-                'submitted_at' => now(),
-            ])->save();
+            $records->respondToClarification($record, $request->user(), $validated['comment']);
         }
 
         AuditLog::create([

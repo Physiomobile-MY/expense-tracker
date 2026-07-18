@@ -720,9 +720,16 @@ class ExampleTest extends TestCase
             ]);
             $this->assertDatabaseHas('audit_logs', [
                 'user_id' => $finance->id,
-                'action' => 'bulk_status_changed',
+                'action' => 'approved',
                 'module' => 'expense_records',
                 'record_id' => $record->id,
+            ]);
+            $this->assertDatabaseHas('expense_approvals', [
+                'expense_record_id' => $record->id,
+                'approver_id' => $finance->id,
+                'action' => 'approved',
+                'previous_status' => 'pending_review',
+                'new_status' => 'approved',
             ]);
         }
         $this->assertDatabaseHas('expense_records', [

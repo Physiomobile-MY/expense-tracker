@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\AuditLog;
 use App\Models\Department;
 use App\Models\ExpenseCategory;
 use App\Models\ExpenseRecord;
 use App\Models\User;
+use App\Services\ExpenseRecordService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -45,7 +45,7 @@ class ReportController extends Controller
         ]);
     }
 
-    public function bulkStatus(Request $request): RedirectResponse
+    public function bulkStatus(Request $request, ExpenseRecordService $recordService): RedirectResponse
     {
         abort_unless($request->user()->canManageExpenses(), 403);
 
@@ -74,30 +74,19 @@ class ReportController extends Controller
             ]);
         }
 
-        DB::transaction(function () use ($records, $request, $validated): void {
+        $updated = 0;
+        DB::transaction(function () use ($records, $recordService, $request, $validated, &$updated): void {
             foreach ($records as $record) {
-                $previousStatus = $record->status;
-
-                if ($previousStatus === $validated['status']) {
+                if ($record->status === $validated['status']) {
                     continue;
                 }
 
-                $record->forceFill(['status' => $validated['status']])->save();
-
-                AuditLog::create([
-                    'user_id' => $request->user()->id,
-                    'action' => 'bulk_status_changed',
-                    'module' => 'expense_records',
-                    'record_id' => $record->id,
-                    'old_values' => ['status' => $previousStatus],
-                    'new_values' => ['status' => $validated['status']],
-                    'ip_address' => $request->ip(),
-                    'user_agent' => $request->userAgent(),
-                ]);
+                $recordService->transitionToStatus($record, $request->user(), $validated['status'], 'Bulk workflow transition.');
+                $updated++;
             }
         });
 
-        return back()->with('status', $records->count().' expense record(s) updated.');
+        return back()->with('status', $updated.' expense record(s) updated.');
     }
 
     public function export(Request $request): BinaryFileResponse|StreamedResponse
