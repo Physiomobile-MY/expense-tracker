@@ -97,7 +97,7 @@ class ExpenseRecordController extends Controller
         return redirect()->route('records.show', $record)->with('status', 'Expense record submitted.');
     }
 
-    public function comment(Request $request, ExpenseRecord $record): RedirectResponse
+    public function comment(Request $request, ExpenseRecord $record, ExpenseRecordService $records): RedirectResponse
     {
         $this->authorizeVisible($request, $record);
 
@@ -111,10 +111,7 @@ class ExpenseRecordController extends Controller
         ]);
 
         if ($record->user_id === $request->user()->id && $record->status === 'need_clarification') {
-            $record->forceFill([
-                'status' => 'pending_review',
-                'submitted_at' => now(),
-            ])->save();
+            $records->respondToClarification($record, $request->user(), $validated['comment']);
         }
 
         AuditLog::create([
@@ -166,6 +163,7 @@ class ExpenseRecordController extends Controller
     {
         $this->authorizeVisible($request, $record);
         abort_if($receipt->expense_record_id !== $record->id, 404);
+        abort_unless($record->canBeEditedBy($request->user()), 403);
 
         $validated = $request->validate([
             'document_type' => ['required', Rule::in(ExpenseReceipt::documentTypes())],
@@ -180,8 +178,9 @@ class ExpenseRecordController extends Controller
     {
         $this->authorizeVisible($request, $record);
         abort_if($receipt->expense_record_id !== $record->id, 404);
+        abort_unless($record->canBeEditedBy($request->user()), 403);
 
-        Storage::delete($receipt->file_path);
+        Storage::disk((string) config('expenseflow.receipt_disk', 'receipts'))->delete($receipt->file_path);
         $receipt->delete();
 
         return back()->with('status', 'Receipt removed.');

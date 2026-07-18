@@ -14,7 +14,7 @@ class HandleImpersonation
         if ($request->session()->has('impersonating_user_id') && Auth::check()) {
             $target = User::find($request->session()->get('impersonating_user_id'));
 
-            if ($target) {
+            if ($target && $target->status === 'active' && ! $target->must_change_password && ! $target->isDirector()) {
                 Auth::setUser($target);
             } else {
                 $request->session()->forget(['impersonating_user_id', 'impersonator_id']);

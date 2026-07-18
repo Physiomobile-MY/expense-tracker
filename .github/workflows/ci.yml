@@ -1,0 +1,114 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  php-tests:
+    name: PHP tests
+    runs-on: ubuntu-latest
+    env:
+      APP_ENV: testing
+      APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ':memory:'
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+      AI_RECEIPT_EXTRACTION_ENABLED: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, xml, ctype, fileinfo, openssl, pdo_sqlite, sqlite3, dom, curl, zip
+          coverage: none
+          tools: composer:v2
+
+      - name: Validate Composer manifest
+        run: composer validate --strict
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Composer audit
+        run: composer audit --locked
+
+      - name: Prepare Laravel env file
+        run: cp .env.example .env
+
+      - name: Clear config
+        run: php artisan config:clear
+
+      - name: Run PHPUnit
+        run: php artisan test
+
+  pint:
+    name: Laravel Pint changed files
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer:v2
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Run Pint on changed PHP files
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE_SHA="${{ github.event.before }}"
+          fi
+
+          if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            BASE_SHA="origin/main"
+          fi
+
+          CHANGED_FILES=$(git diff --name-only --diff-filter=ACM "$BASE_SHA" HEAD -- '*.php')
+
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "No changed PHP files."
+            exit 0
+          fi
+
+          ./vendor/bin/pint --test $CHANGED_FILES
+
+  frontend-build-and-audit:
+    name: Frontend build and npm audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install npm dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Audit npm dependencies
+        run: npm audit --audit-level=high

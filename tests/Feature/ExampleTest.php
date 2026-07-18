@@ -32,7 +32,7 @@ class ExampleTest extends TestCase
         $this->withoutVite();
         $this->seed();
 
-        $user = User::where('email', 'nidzamyatimi@physiomobile.com')->first();
+        $user = User::where('email', 'director.one@example.test')->first();
         $user->forceFill(['must_change_password' => false])->save();
 
         $response = $this->actingAs($user)
@@ -41,18 +41,18 @@ class ExampleTest extends TestCase
         $response->assertStatus(200);
     }
 
-    public function test_seeded_directors_must_change_temporary_password(): void
+    public function test_seeded_local_demo_directors_use_synthetic_emails_and_must_change_password(): void
     {
         $this->seed();
 
         $this->assertDatabaseCount('users', 2);
         $this->assertDatabaseHas('users', [
-            'email' => 'nidzamyatimi@physiomobile.com',
+            'email' => 'director.one@example.test',
             'role' => 'director_super_admin',
             'must_change_password' => true,
         ]);
         $this->assertDatabaseHas('users', [
-            'email' => 'saiful@physiomobile.com',
+            'email' => 'director.two@example.test',
             'role' => 'director_super_admin',
             'must_change_password' => true,
         ]);
@@ -60,7 +60,7 @@ class ExampleTest extends TestCase
             'name' => 'executive',
         ]);
 
-        $response = $this->actingAs(User::where('email', 'nidzamyatimi@physiomobile.com')->first())
+        $response = $this->actingAs(User::where('email', 'director.one@example.test')->first())
             ->get('/');
 
         $response->assertRedirect('/change-password');
@@ -70,7 +70,7 @@ class ExampleTest extends TestCase
     {
         $this->seed();
 
-        $director = User::where('email', 'nidzamyatimi@physiomobile.com')->first();
+        $director = User::where('email', 'director.one@example.test')->first();
         $director->forceFill(['must_change_password' => false])->save();
 
         Role::where('name', 'executive')->delete();
@@ -93,7 +93,9 @@ class ExampleTest extends TestCase
             'role' => 'executive',
             'status' => 'active',
         ]);
-        $this->assertTrue(User::where('email', 'nidzam.executive@physiomobile.com')->first()->hasRole('executive'));
+        $createdUser = User::where('email', 'nidzam.executive@physiomobile.com')->first();
+        $this->assertTrue($createdUser->hasRole('executive'));
+        $this->assertTrue($createdUser->must_change_password);
     }
 
     public function test_executive_accounts_are_staff_level_and_only_see_their_own_records(): void
@@ -109,7 +111,7 @@ class ExampleTest extends TestCase
             'must_change_password' => false,
         ]);
         $otherExecutive = User::factory()->create([
-            'name' => 'Saiful Executive',
+            'name' => 'Demo Director Two Executive',
             'email' => 'saiful.executive@physiomobile.com',
             'role' => 'executive',
             'status' => 'active',
@@ -241,8 +243,8 @@ class ExampleTest extends TestCase
         $this->withoutVite();
         $this->seed();
 
-        $nidzam = User::where('email', 'nidzamyatimi@physiomobile.com')->firstOrFail();
-        $saiful = User::where('email', 'saiful@physiomobile.com')->firstOrFail();
+        $nidzam = User::where('email', 'director.one@example.test')->firstOrFail();
+        $saiful = User::where('email', 'director.two@example.test')->firstOrFail();
         $nidzam->forceFill(['must_change_password' => false])->save();
 
         $this->actingAs($nidzam)
@@ -250,18 +252,18 @@ class ExampleTest extends TestCase
             ->assertOk()
             ->assertSee('Nama Staff')
             ->assertSee('<option value="'.$nidzam->id.'"', false)
-            ->assertSee('Nidzam Yatimi')
+            ->assertSee('Demo Director One')
             ->assertSee('<option value="'.$saiful->id.'"', false)
-            ->assertSee('Saiful');
+            ->assertSee('Demo Director Two');
     }
 
     public function test_director_upload_stays_draft_for_review_when_ai_is_not_configured(): void
     {
         $this->seed();
-        Storage::fake('local');
+        Storage::fake('receipts');
         Mail::fake();
 
-        $user = User::where('email', 'nidzamyatimi@physiomobile.com')->first();
+        $user = User::where('email', 'director.one@example.test')->first();
         $user->forceFill(['must_change_password' => false])->save();
 
         $response = $this->actingAs($user)
@@ -279,7 +281,7 @@ class ExampleTest extends TestCase
         $this->assertDatabaseCount('expense_receipts', 1);
         $receipt = ExpenseReceipt::first();
         $this->assertStringStartsWith('receipts/', $receipt->file_path);
-        $this->assertDatabaseHas('ai_extraction_logs', ['status' => 'failed']);
+        $this->assertDatabaseHas('ai_extraction_logs', ['status' => 'skipped']);
         $this->assertSame('draft', $record->status);
         $this->assertNull($record->record_type);
         $this->assertNull($record->claim_reference_no);
@@ -296,10 +298,10 @@ class ExampleTest extends TestCase
     public function test_director_can_upload_heic_receipt(): void
     {
         $this->seed();
-        Storage::fake('local');
+        Storage::fake('receipts');
         Mail::fake();
 
-        $user = User::where('email', 'nidzamyatimi@physiomobile.com')->first();
+        $user = User::where('email', 'director.one@example.test')->first();
         $user->forceFill(['must_change_password' => false])->save();
 
         $response = $this->actingAs($user)
@@ -324,10 +326,10 @@ class ExampleTest extends TestCase
     public function test_both_seeded_directors_upload_receipts_as_drafts(): void
     {
         $this->seed();
-        Storage::fake('local');
+        Storage::fake('receipts');
         Mail::fake();
 
-        foreach (['nidzamyatimi@physiomobile.com', 'saiful@physiomobile.com'] as $index => $email) {
+        foreach (['director.one@example.test', 'director.two@example.test'] as $index => $email) {
             $user = User::where('email', $email)->firstOrFail();
             $user->forceFill(['must_change_password' => false])->save();
 
@@ -353,7 +355,7 @@ class ExampleTest extends TestCase
         $this->seed();
         Mail::fake();
 
-        $user = User::where('email', 'nidzamyatimi@physiomobile.com')->first();
+        $user = User::where('email', 'director.one@example.test')->first();
         $user->forceFill(['must_change_password' => false])->save();
 
         $record = ExpenseRecord::create([
@@ -400,9 +402,9 @@ class ExampleTest extends TestCase
     {
         $this->withoutVite();
         $this->seed();
-        Storage::fake('local');
+        Storage::fake('receipts');
 
-        $user = User::where('email', 'nidzamyatimi@physiomobile.com')->first();
+        $user = User::where('email', 'director.one@example.test')->first();
         $user->forceFill(['must_change_password' => false])->save();
 
         $this->actingAs($user)
@@ -465,7 +467,7 @@ class ExampleTest extends TestCase
         $this->withoutVite();
         $this->seed();
 
-        $user = User::where('email', 'nidzamyatimi@physiomobile.com')->first();
+        $user = User::where('email', 'director.one@example.test')->first();
         $user->forceFill(['must_change_password' => false])->save();
 
         $record = ExpenseRecord::create([
@@ -518,7 +520,7 @@ class ExampleTest extends TestCase
         $this->seed();
         Mail::fake();
 
-        foreach (['nidzamyatimi@physiomobile.com', 'saiful@physiomobile.com'] as $index => $email) {
+        foreach (['director.one@example.test', 'director.two@example.test'] as $index => $email) {
             $user = User::where('email', $email)->firstOrFail();
             $user->forceFill(['must_change_password' => false])->save();
 
@@ -550,9 +552,9 @@ class ExampleTest extends TestCase
     public function test_route_screenshot_can_be_attached_to_existing_draft(): void
     {
         $this->seed();
-        Storage::fake('local');
+        Storage::fake('receipts');
 
-        $user = User::where('email', 'nidzamyatimi@physiomobile.com')->first();
+        $user = User::where('email', 'director.one@example.test')->first();
         $user->forceFill(['must_change_password' => false])->save();
 
         $record = ExpenseRecord::create([
@@ -574,15 +576,15 @@ class ExampleTest extends TestCase
 
         $this->assertSame('waze_screenshot', $receipt->document_type);
         $this->assertStringStartsWith('route-screenshots/', $receipt->file_path);
-        Storage::disk('local')->assertExists($receipt->file_path);
+        Storage::disk('receipts')->assertExists($receipt->file_path);
     }
 
     public function test_multiple_route_screenshots_can_be_attached_and_each_is_scanned(): void
     {
         $this->seed();
-        Storage::fake('local');
+        Storage::fake('receipts');
 
-        $user = User::where('email', 'nidzamyatimi@physiomobile.com')->first();
+        $user = User::where('email', 'director.one@example.test')->first();
         $user->forceFill(['must_change_password' => false])->save();
 
         $record = ExpenseRecord::create([
@@ -622,8 +624,8 @@ class ExampleTest extends TestCase
         $this->withoutVite();
         $this->seed();
 
-        $viewer = User::where('email', 'nidzamyatimi@physiomobile.com')->firstOrFail();
-        $selectedSuperAdmin = User::where('email', 'saiful@physiomobile.com')->firstOrFail();
+        $viewer = User::where('email', 'director.one@example.test')->firstOrFail();
+        $selectedSuperAdmin = User::where('email', 'director.two@example.test')->firstOrFail();
         $viewer->forceFill(['must_change_password' => false])->save();
         $selectedSuperAdmin->forceFill(['must_change_password' => false])->save();
         $category = ExpenseCategory::firstOrFail();
@@ -718,9 +720,16 @@ class ExampleTest extends TestCase
             ]);
             $this->assertDatabaseHas('audit_logs', [
                 'user_id' => $finance->id,
-                'action' => 'bulk_status_changed',
+                'action' => 'approved',
                 'module' => 'expense_records',
                 'record_id' => $record->id,
+            ]);
+            $this->assertDatabaseHas('expense_approvals', [
+                'expense_record_id' => $record->id,
+                'approver_id' => $finance->id,
+                'action' => 'approved',
+                'previous_status' => 'pending_review',
+                'new_status' => 'approved',
             ]);
         }
         $this->assertDatabaseHas('expense_records', [
@@ -733,7 +742,7 @@ class ExampleTest extends TestCase
     {
         $this->seed();
 
-        $user = User::where('email', 'nidzamyatimi@physiomobile.com')->first();
+        $user = User::where('email', 'director.one@example.test')->first();
         $user->forceFill(['must_change_password' => false])->save();
 
         $response = $this->actingAs($user)
@@ -749,7 +758,7 @@ class ExampleTest extends TestCase
         config(['expenseflow.notifications.finance_approval_email' => 'finance.hq@physiomobile.com']);
         Mail::fake();
 
-        $user = User::where('email', 'nidzamyatimi@physiomobile.com')->first();
+        $user = User::where('email', 'director.one@example.test')->first();
         $user->forceFill(['must_change_password' => false])->save();
         $category = ExpenseCategory::first();
         $record = ExpenseRecord::create([
@@ -783,7 +792,7 @@ class ExampleTest extends TestCase
         $this->seed();
         Mail::fake();
 
-        $user = User::where('email', 'nidzamyatimi@physiomobile.com')->first();
+        $user = User::where('email', 'director.one@example.test')->first();
         $user->forceFill(['must_change_password' => false])->save();
         $record = ExpenseRecord::create([
             'user_id' => $user->id,
@@ -818,7 +827,7 @@ class ExampleTest extends TestCase
         config(['expenseflow.notifications.finance_approval_email' => 'finance.hq@physiomobile.com']);
         Mail::fake();
 
-        $user = User::where('email', 'nidzamyatimi@physiomobile.com')->first();
+        $user = User::where('email', 'director.one@example.test')->first();
         $user->forceFill(['must_change_password' => false])->save();
         $category = ExpenseCategory::first();
         $record = ExpenseRecord::create([
@@ -853,9 +862,9 @@ class ExampleTest extends TestCase
     public function test_clear_records_command_deletes_expense_test_data_only(): void
     {
         $this->seed();
-        Storage::fake('local');
+        Storage::fake('receipts');
 
-        $user = User::where('email', 'nidzamyatimi@physiomobile.com')->first();
+        $user = User::where('email', 'director.one@example.test')->first();
         $path = 'receipts/2026/05/test.pdf';
         Storage::put($path, 'receipt');
 
@@ -904,7 +913,7 @@ class ExampleTest extends TestCase
     {
         $this->seed();
 
-        $user = User::where('email', 'nidzamyatimi@physiomobile.com')->first();
+        $user = User::where('email', 'director.one@example.test')->first();
         $user->forceFill(['must_change_password' => false])->save();
         $category = ExpenseCategory::first();
         $record = ExpenseRecord::create([
@@ -947,7 +956,7 @@ class ExampleTest extends TestCase
         $this->withoutVite();
         $this->seed();
 
-        $user = User::where('email', 'nidzamyatimi@physiomobile.com')->first();
+        $user = User::where('email', 'director.one@example.test')->first();
         $user->forceFill(['must_change_password' => false])->save();
         $category = ExpenseCategory::where('code', 'MEAL')->first();
 
@@ -993,7 +1002,7 @@ class ExampleTest extends TestCase
         $this->withoutVite();
         $this->seed();
 
-        $user = User::where('email', 'nidzamyatimi@physiomobile.com')->first();
+        $user = User::where('email', 'director.one@example.test')->first();
         $user->forceFill(['must_change_password' => false])->save();
 
         ExpenseRecord::create([
@@ -1024,7 +1033,7 @@ class ExampleTest extends TestCase
         $this->withoutVite();
         $this->seed();
 
-        $user = User::where('email', 'nidzamyatimi@physiomobile.com')->first();
+        $user = User::where('email', 'director.one@example.test')->first();
         $user->forceFill(['must_change_password' => false])->save();
 
         ExpenseRecord::create([
@@ -1073,7 +1082,7 @@ class ExampleTest extends TestCase
         $this->seed();
         Mail::fake();
 
-        $user = User::where('email', 'nidzamyatimi@physiomobile.com')->first();
+        $user = User::where('email', 'director.one@example.test')->first();
         $user->forceFill(['must_change_password' => false])->save();
 
         $this->actingAs($user)

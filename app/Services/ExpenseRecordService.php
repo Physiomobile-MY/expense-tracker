@@ -314,6 +314,29 @@ class ExpenseRecordService
         return $this->transition($record, $actor, 'flagged', 'flagged', $remarks);
     }
 
+    public function respondToClarification(ExpenseRecord $record, User $actor, string $comment): ExpenseRecord
+    {
+        if ($record->user_id !== $actor->id || $record->status !== 'need_clarification') {
+            throw ValidationException::withMessages(['status' => 'Only the owner can respond to a clarification request.']);
+        }
+
+        return $this->transition($record, $actor, 'clarification_responded', 'pending_review', $comment, ['submitted_at' => now()]);
+    }
+
+    public function transitionToStatus(ExpenseRecord $record, User $actor, string $status, ?string $remarks = null): ExpenseRecord
+    {
+        return match ($status) {
+            'approved' => $this->approve($record, $actor, $remarks),
+            'rejected' => $this->reject($record, $actor, $remarks),
+            'paid' => $this->markPaid($record, $actor, $remarks),
+            'need_clarification' => $this->requestClarification($record, $actor, $remarks ?: 'Clarification requested.'),
+            'reviewed' => $this->reviewNonClaimable($record, $actor, $remarks),
+            'flagged' => $this->flagNonClaimable($record, $actor, $remarks),
+            'voided' => $this->voidRecord($record, $actor, $remarks ?: 'Bulk voided.'),
+            default => throw ValidationException::withMessages(['status' => 'Unsupported workflow status transition.']),
+        };
+    }
+
     public function generateReferenceNo(string $recordType, $receiptDate = null): string
     {
         $prefix = $recordType === ExpenseRecord::TYPE_NON_CLAIMABLE ? 'PMREC' : 'PMEXP';
@@ -331,7 +354,7 @@ class ExpenseRecordService
 
     private function createReceiptFromUpload(ExpenseRecord $record, User $user, UploadedFile $file, string $documentType): ExpenseReceipt
     {
-        $path = Storage::putFile($this->receiptStorageDirectory($documentType).'/'.now()->format('Y/m'), $file);
+        $path = Storage::disk($this->receiptDisk())->putFile($this->receiptStorageDirectory($documentType).'/'.now()->format('Y/m'), $file);
 
         return ExpenseReceipt::create([
             'expense_record_id' => $record->id,
@@ -342,6 +365,11 @@ class ExpenseRecordService
             'uploaded_by' => $user->id,
             'document_type' => $documentType,
         ]);
+    }
+
+    private function receiptDisk(): string
+    {
+        return (string) config('expenseflow.receipt_disk', 'receipts');
     }
 
     private function receiptStorageDirectory(string $documentType): string

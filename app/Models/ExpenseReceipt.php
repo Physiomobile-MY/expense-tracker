@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Storage;
 
 class ExpenseReceipt extends Model
 {
@@ -63,7 +62,7 @@ class ExpenseReceipt extends Model
 
     public function url(): string
     {
-        return Storage::url($this->file_path);
+        return route('receipts.file', $this);
     }
 
     public function isImage(): bool
